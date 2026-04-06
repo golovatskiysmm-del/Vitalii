@@ -3,12 +3,14 @@ import { NextRequest, NextResponse } from 'next/server';
 import { scrapeInstagramPost } from '@/lib/instagram-scraper';
 import { prisma } from '@/lib/db';
 
+export const maxDuration = 30;
+
 export async function POST(req: NextRequest) {
   try {
     const { url } = await req.json();
 
     if (!url || typeof url !== 'string') {
-      return NextResponse.json({ error: 'Instagram URL is required' }, { status: 400 });
+      return NextResponse.json({ error: 'Укажите URL Instagram-поста' }, { status: 400 });
     }
 
     const postData = await scrapeInstagramPost(url);
@@ -27,9 +29,11 @@ export async function POST(req: NextRequest) {
       id: analyzed.id,
       shortcode: postData.shortcode,
       caption: postData.caption,
-      slides: postData.slides,
+      slides: postData.slides,        // contains CDN URLs — browser renders them directly
       isCarousel: postData.isCarousel,
       authorUsername: postData.authorUsername,
+      embedHtml: postData.embedHtml,
+      slideCount: postData.slides.length,
     });
   } catch (err) {
     const message = err instanceof Error ? err.message : 'Unknown error';
