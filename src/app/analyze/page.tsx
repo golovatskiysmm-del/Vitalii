@@ -4,16 +4,12 @@ import { useState, useRef } from 'react';
 import { useRouter } from 'next/navigation';
 
 /* ── Types ────────────────────────────────────────────────────────────────── */
-interface AnalyzedSlide {
-  type: 'image' | 'video';
-  url: string;
-  storedUrl?: string;
-}
 
 interface AnalyzedPost {
   id: string;
+  shortcode: string;
   caption: string;
-  slides: AnalyzedSlide[];
+  slides: { type: string; url: string }[];
   isCarousel: boolean;
   authorUsername?: string;
   embedHtml?: string;
@@ -33,16 +29,6 @@ interface GenerateOptions {
 type Step = 1 | 2 | 3 | 4;
 type ContextSource = 'file' | 'url' | 'manual';
 
-const SLIDE_COLORS = [
-  'from-purple-700 to-purple-900',
-  'from-blue-700 to-blue-900',
-  'from-pink-700 to-pink-900',
-  'from-indigo-700 to-indigo-900',
-  'from-teal-700 to-teal-900',
-  'from-orange-700 to-orange-900',
-  'from-rose-700 to-rose-900',
-  'from-cyan-700 to-cyan-900',
-];
 
 const IMAGE_PROVIDERS: { value: ImageProvider; label: string; badge?: string }[] = [
   { value: 'none', label: 'Без изображений' },
@@ -189,30 +175,6 @@ export default function AnalyzePage() {
     }
   }
 
-  /* ── Slide display image ───────────────────────────────────────────────── */
-  function SlideThumb({ slide, index }: { slide: AnalyzedSlide; index: number }) {
-    const displayUrl = slide.storedUrl || slide.url;
-    const [imgFailed, setImgFailed] = useState(false);
-
-    if (slide.type === 'image' && displayUrl && !imgFailed) {
-      return (
-        <img
-          src={displayUrl}
-          alt={`Слайд ${index + 1}`}
-          className="w-full h-full object-cover"
-          crossOrigin="anonymous"
-          onError={() => setImgFailed(true)}
-        />
-      );
-    }
-    return (
-      <div className={`w-full h-full flex flex-col items-center justify-center bg-gradient-to-br ${SLIDE_COLORS[index % SLIDE_COLORS.length]}`}>
-        <span className="text-white font-bold text-xl">{index + 1}</span>
-        {slide.type === 'video' && <span className="text-xs text-white/70 mt-1">видео</span>}
-      </div>
-    );
-  }
-
   /* ── Step indicator ────────────────────────────────────────────────────── */
   function StepBadge({ n, label, active, done }: { n: number; label: string; active: boolean; done: boolean }) {
     return (
@@ -296,28 +258,22 @@ export default function AnalyzePage() {
             </div>
 
             {analyzed.authorUsername && (
-              <p className="text-sm text-gray-400">@{analyzed.authorUsername}</p>
+              <p className="text-sm text-gray-400 mb-1">@{analyzed.authorUsername}</p>
             )}
 
-            {/* Slides */}
-            {analyzed.slides.length > 0 ? (
-              <div className="flex gap-2 overflow-x-auto pb-1">
-                {analyzed.slides.slice(0, 10).map((slide, i) => (
-                  <div key={i} className="flex-shrink-0 w-24 h-24 rounded-xl overflow-hidden border border-gray-700">
-                    <SlideThumb slide={slide} index={i} />
-                  </div>
-                ))}
-                {analyzed.slides.length > 10 && (
-                  <div className="flex-shrink-0 w-24 h-24 rounded-xl bg-gray-800 border border-gray-700 flex items-center justify-center text-gray-500 text-sm">
-                    +{analyzed.slides.length - 10}
-                  </div>
-                )}
-              </div>
-            ) : (
-              <div className="bg-yellow-950/30 border border-yellow-700/30 rounded-lg p-3 text-xs text-yellow-300">
-                Instagram заблокировал загрузку изображений с сервера. Опишите слайды ниже — Claude всё равно создаст аналог.
-              </div>
-            )}
+            {/* Instagram embed iframe — shows real carousel in browser */}
+            <div className="relative w-full rounded-xl overflow-hidden bg-gray-900 border border-gray-700">
+              <p className="text-xs text-gray-500 px-3 pt-2 pb-1">Карусель (пролистайте стрелками внутри):</p>
+              <iframe
+                src={`https://www.instagram.com/p/${analyzed.shortcode}/embed/`}
+                className="w-full"
+                style={{ height: '540px', border: 'none' }}
+                scrolling="no"
+                allowTransparency={true}
+                allow="encrypted-media"
+                title="Instagram карусель"
+              />
+            </div>
 
             {analyzed.caption && (
               <div className="bg-gray-800/80 rounded-lg p-3 text-sm text-gray-300 max-h-28 overflow-y-auto">
@@ -328,7 +284,7 @@ export default function AnalyzePage() {
 
             {/* Hint about slides */}
             <div>
-              <label className="label">Опишите карусель (необязательно — улучшает результат)</label>
+              <label className="label">Опишите карусель для Claude (необязательно — улучшает результат)</label>
               <textarea
                 className="input resize-none w-full"
                 rows={3}
