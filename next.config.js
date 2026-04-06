@@ -11,8 +11,6 @@ const nextConfig = {
   experimental: {
     serverComponentsExternalPackages: ['sharp', 'prisma', '@prisma/client'],
   },
-  // Allow build without database connection
-  output: 'standalone',
 };
 
 module.exports = nextConfig;
