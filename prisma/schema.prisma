@@ -5,10 +5,8 @@ generator client {
 datasource db {
   provider  = "postgresql"
   url       = env("DATABASE_URL")
-  directUrl = env("DIRECT_URL")
+  directUrl = env("DATABASE_URL_UNPOOLED")
 }
-
-// DATABASE_URL and DIRECT_URL are set automatically by Vercel Postgres
 
 model Avatar {
   id        String   @id @default(uuid())
