@@ -1,3 +1,4 @@
+export const dynamic = 'force-dynamic';
 import { NextRequest, NextResponse } from 'next/server';
 import { scrapeInstagramPost } from '@/lib/instagram-scraper';
 import { prisma } from '@/lib/db';
