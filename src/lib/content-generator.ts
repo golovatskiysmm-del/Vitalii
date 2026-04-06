@@ -1,13 +1,16 @@
 import Anthropic from '@anthropic-ai/sdk';
 import type { InstagramPostData } from './instagram-scraper';
 
-const anthropic = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY });
+// Lazy init - don't create client at module level
+function getClient() {
+  return new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY || 'dummy' });
+}
 
 export interface GeneratedSlide {
   imagePrompt: string;
   heading: string;
   bodyText: string;
-  imageUrl?: string; // filled after generation
+  imageUrl?: string;
 }
 
 export interface GeneratedCarousel {
@@ -27,9 +30,11 @@ export async function analyzeAndGenerate(
     additionalInstructions?: string;
   } = {}
 ): Promise<GeneratedCarousel> {
+  const anthropic = getClient();
+
   const imageContents: Anthropic.ImageBlockParam[] = post.slides
     .filter((s) => s.type === 'image' && s.url)
-    .slice(0, 10) // API limit
+    .slice(0, 10)
     .map((s) => ({
       type: 'image' as const,
       source: { type: 'url' as const, url: s.url },
@@ -96,11 +101,8 @@ Create ${Math.min(post.slides.length, 7)} slides minimum. Make each slide stand 
   });
 
   const text = response.content.find((c) => c.type === 'text')?.text || '';
-
-  // Extract JSON from the response
   const jsonMatch = text.match(/\{[\s\S]+\}/);
   if (!jsonMatch) throw new Error('Failed to parse AI response as JSON');
 
-  const result = JSON.parse(jsonMatch[0]) as GeneratedCarousel;
-  return result;
+  return JSON.parse(jsonMatch[0]) as GeneratedCarousel;
 }
