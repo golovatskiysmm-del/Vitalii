@@ -27,13 +27,13 @@ function StatusBadge({ status }: { status: string }) {
     posting: 'badge-generating',
   };
   const labels: Record<string, string> = {
-    draft: 'Draft',
-    approved: 'Approved',
-    scheduled: 'Scheduled',
-    posted: 'Posted',
-    failed: 'Failed',
-    generating: 'Generating...',
-    posting: 'Posting...',
+    draft: 'Черновик',
+    approved: 'Одобрено',
+    scheduled: 'Запланировано',
+    posted: 'Опубликовано',
+    failed: 'Ошибка',
+    generating: 'Генерация...',
+    posting: 'Публикация...',
   };
   return <span className={map[status] || 'badge-draft'}>{labels[status] || status}</span>;
 }
@@ -61,21 +61,21 @@ export default function Dashboard() {
       {/* Header */}
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-2xl font-bold text-white">Dashboard</h1>
-          <p className="text-gray-400 text-sm mt-1">Manage your Instagram carousel content</p>
+          <h1 className="text-2xl font-bold text-white">Главная</h1>
+          <p className="text-gray-400 text-sm mt-1">Управление контентом Instagram-каруселей</p>
         </div>
         <Link href="/analyze" className="btn-primary">
-          ✨ New Carousel
+          ✨ Новый карусель
         </Link>
       </div>
 
       {/* Stats */}
       <div className="grid grid-cols-4 gap-4">
         {[
-          { label: 'Total', value: stats.total, color: 'text-white' },
-          { label: 'Drafts', value: stats.draft, color: 'text-gray-400' },
-          { label: 'Scheduled', value: stats.scheduled, color: 'text-blue-400' },
-          { label: 'Posted', value: stats.posted, color: 'text-purple-400' },
+          { label: 'Всего', value: stats.total, color: 'text-white' },
+          { label: 'Черновики', value: stats.draft, color: 'text-gray-400' },
+          { label: 'Запланировано', value: stats.scheduled, color: 'text-blue-400' },
+          { label: 'Опубликовано', value: stats.posted, color: 'text-purple-400' },
         ].map((s) => (
           <div key={s.label} className="card text-center">
             <div className={clsx('text-3xl font-bold', s.color)}>{s.value}</div>
@@ -86,16 +86,16 @@ export default function Dashboard() {
 
       {/* Carousels List */}
       <div className="card">
-        <h2 className="text-base font-semibold text-white mb-4">Recent Carousels</h2>
+        <h2 className="text-base font-semibold text-white mb-4">Последние карусели</h2>
 
         {loading ? (
-          <div className="text-center py-12 text-gray-500">Loading...</div>
+          <div className="text-center py-12 text-gray-500">Загрузка...</div>
         ) : carousels.length === 0 ? (
           <div className="text-center py-12">
             <div className="text-4xl mb-3">📸</div>
-            <p className="text-gray-400 mb-4">No carousels yet</p>
+            <p className="text-gray-400 mb-4">Нет каруселей</p>
             <Link href="/analyze" className="btn-primary">
-              Create your first carousel
+              Создать первый карусель
             </Link>
           </div>
         ) : (
@@ -125,18 +125,18 @@ export default function Dashboard() {
                 <div className="flex-1 min-w-0">
                   <div className="flex items-center gap-2 mb-1">
                     <StatusBadge status={carousel.status} />
-                    <span className="text-xs text-gray-600">{carousel.slides.length} slides</span>
+                    <span className="text-xs text-gray-600">{carousel.slides.length} слайдов</span>
                     {carousel.analyzedPost?.authorUsername && (
-                      <span className="text-xs text-gray-600">from @{carousel.analyzedPost.authorUsername}</span>
+                      <span className="text-xs text-gray-600">из @{carousel.analyzedPost.authorUsername}</span>
                     )}
                   </div>
                   <p className="text-sm text-gray-300 truncate">{carousel.caption.slice(0, 100)}</p>
                   <p className="text-xs text-gray-600 mt-1">
                     {carousel.scheduledAt
-                      ? `Scheduled: ${new Date(carousel.scheduledAt).toLocaleString()}`
+                      ? `Запланировано: ${new Date(carousel.scheduledAt).toLocaleString()}`
                       : carousel.postedAt
-                      ? `Posted: ${new Date(carousel.postedAt).toLocaleString()}`
-                      : `Created: ${new Date(carousel.createdAt).toLocaleDateString()}`}
+                      ? `Опубликовано: ${new Date(carousel.postedAt).toLocaleString()}`
+                      : `Создано: ${new Date(carousel.createdAt).toLocaleDateString()}`}
                   </p>
                 </div>
 

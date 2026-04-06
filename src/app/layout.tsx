@@ -3,8 +3,8 @@ import './globals.css';
 import Navigation from '@/components/Navigation';
 
 export const metadata: Metadata = {
-  title: 'Instagram Carousel Studio',
-  description: 'Analyze, generate, and auto-post unique Instagram carousels powered by AI',
+  title: 'Instagram Карусель Студия',
+  description: 'Анализируйте, генерируйте и автоматически публикуйте уникальные Instagram-карусели на базе ИИ',
 };
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {

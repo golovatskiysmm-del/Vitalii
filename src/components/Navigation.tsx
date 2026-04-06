@@ -5,11 +5,11 @@ import { usePathname } from 'next/navigation';
 import clsx from 'clsx';
 
 const links = [
-  { href: '/', label: 'Dashboard', icon: '📊' },
-  { href: '/analyze', label: 'New Carousel', icon: '✨' },
-  { href: '/scheduled', label: 'Scheduled', icon: '🕐' },
-  { href: '/avatar', label: 'Avatar', icon: '👤' },
-  { href: '/settings', label: 'Settings', icon: '⚙️' },
+  { href: '/', label: 'Главная', icon: '📊' },
+  { href: '/analyze', label: 'Новый карусель', icon: '✨' },
+  { href: '/scheduled', label: 'Запланировано', icon: '🕐' },
+  { href: '/avatar', label: 'Аватар', icon: '👤' },
+  { href: '/settings', label: 'Настройки', icon: '⚙️' },
 ];
 
 export default function Navigation() {
@@ -24,8 +24,8 @@ export default function Navigation() {
             📸
           </div>
           <div>
-            <div className="font-bold text-white text-sm leading-tight">Carousel</div>
-            <div className="text-xs instagram-gradient-text font-semibold">Studio</div>
+            <div className="font-bold text-white text-sm leading-tight">Карусель</div>
+            <div className="text-xs instagram-gradient-text font-semibold">Студия</div>
           </div>
         </div>
       </div>
@@ -52,7 +52,7 @@ export default function Navigation() {
       {/* Footer */}
       <div className="p-4 border-t border-gray-800">
         <div className="text-xs text-gray-600 text-center">
-          Powered by Claude AI + DALL-E 3
+          На базе Claude AI + DALL-E 3
         </div>
       </div>
     </aside>

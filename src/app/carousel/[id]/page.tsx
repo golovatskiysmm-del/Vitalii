@@ -62,12 +62,12 @@ export default function CarouselPage() {
     const data = await res.json();
     if (!res.ok) { setError(data.error); return; }
     setCarousel(data);
-    setMsg('Carousel approved!');
+    setMsg('Карусель одобрен!');
     setTimeout(() => setMsg(''), 3000);
   }
 
   async function postNow() {
-    if (!confirm('Post this carousel to Instagram now?')) return;
+    if (!confirm('Опубликовать этот карусель в Instagram сейчас?')) return;
     setPosting(true);
     setError('');
     try {
@@ -79,7 +79,7 @@ export default function CarouselPage() {
       const data = await res.json();
       if (!res.ok) throw new Error(data.error);
       setCarousel((c) => c ? { ...c, status: 'posted', postedAt: new Date().toISOString(), instagramPostId: data.mediaId } : c);
-      setMsg('Posted to Instagram!');
+      setMsg('Опубликовано в Instagram!');
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Failed to post');
     } finally {
@@ -88,7 +88,7 @@ export default function CarouselPage() {
   }
 
   async function schedulePost() {
-    if (!scheduledAt) { setError('Please select a date and time'); return; }
+    if (!scheduledAt) { setError('Пожалуйста, выберите дату и время'); return; }
     setPosting(true);
     setError('');
     try {
@@ -100,7 +100,7 @@ export default function CarouselPage() {
       const data = await res.json();
       if (!res.ok) throw new Error(data.error);
       setCarousel((c) => c ? { ...c, status: 'scheduled', scheduledAt } : c);
-      setMsg(`Scheduled for ${new Date(scheduledAt).toLocaleString()}`);
+      setMsg(`Запланировано на ${new Date(scheduledAt).toLocaleString()}`);
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Failed to schedule');
     } finally {
@@ -114,17 +114,17 @@ export default function CarouselPage() {
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ caption }),
     });
-    if (res.ok) { setEditingCaption(false); setMsg('Caption saved!'); setTimeout(() => setMsg(''), 2000); }
+    if (res.ok) { setEditingCaption(false); setMsg('Подпись сохранена!'); setTimeout(() => setMsg(''), 2000); }
   }
 
   async function deleteCarousel() {
-    if (!confirm('Delete this carousel?')) return;
+    if (!confirm('Удалить этот карусель?')) return;
     await fetch(`/api/carousels/${id}`, { method: 'DELETE' });
     router.push('/');
   }
 
-  if (loading) return <div className="text-center py-20 text-gray-500">Loading...</div>;
-  if (!carousel) return <div className="text-center py-20 text-red-400">Carousel not found</div>;
+  if (loading) return <div className="text-center py-20 text-gray-500">Загрузка...</div>;
+  if (!carousel) return <div className="text-center py-20 text-red-400">Карусель не найден</div>;
 
   const isPosted = carousel.status === 'posted';
   const canPost = carousel.status === 'approved';
