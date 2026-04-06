@@ -8,6 +8,8 @@ datasource db {
   directUrl = env("DIRECT_URL")
 }
 
+// DATABASE_URL and DIRECT_URL are set automatically by Vercel Postgres
+
 model Avatar {
   id        String   @id @default(uuid())
   name      String
