@@ -51,6 +51,7 @@ export default function AnalyzePage() {
   // Step 1
   const [igUrl, setIgUrl] = useState('');
   const [analyzed, setAnalyzed] = useState<AnalyzedPost | null>(null);
+  const [postCaption, setPostCaption] = useState(''); // editable caption from post
   const [carouselHint, setCarouselHint] = useState('');
 
   // Step 2
@@ -86,6 +87,7 @@ export default function AnalyzePage() {
       const data = await res.json();
       if (!res.ok) throw new Error(data.error || 'Не удалось проанализировать пост');
       setAnalyzed(data);
+      setPostCaption(data.caption || ''); // pre-fill caption if oEmbed worked
       if (data.slides?.length > 1) setOptions((o) => ({ ...o, slideCount: data.slides.length }));
       setStep(2);
     } catch (err) {
@@ -146,7 +148,8 @@ export default function AnalyzePage() {
     try {
       const extraContext = [
         projectContext ? `Контекст проекта / ДНК клиента:\n${projectContext}` : '',
-        carouselHint ? `Описание оригинальной карусели конкурента:\n${carouselHint}` : '',
+        postCaption ? `Текст оригинального поста:\n${postCaption}` : '',
+        carouselHint ? `Описание слайдов карусели:\n${carouselHint}` : '',
         options.additionalInstructions,
       ].filter(Boolean).join('\n\n');
 
@@ -275,16 +278,28 @@ export default function AnalyzePage() {
               />
             </div>
 
-            {analyzed.caption && (
-              <div className="bg-gray-800/80 rounded-lg p-3 text-sm text-gray-300 max-h-28 overflow-y-auto">
-                <p className="text-xs text-gray-500 mb-1">Текст поста:</p>
-                {analyzed.caption.slice(0, 500)}{analyzed.caption.length > 500 ? '…' : ''}
-              </div>
-            )}
-
-            {/* Hint about slides */}
+            {/* Caption — always shown, editable */}
             <div>
-              <label className="label">Опишите карусель для Claude (необязательно — улучшает результат)</label>
+              <label className="label">
+                Текст поста
+                {postCaption ? (
+                  <span className="ml-2 text-green-400 font-normal">✓ загружен автоматически</span>
+                ) : (
+                  <span className="ml-2 text-yellow-500 font-normal">— вставьте вручную из Instagram</span>
+                )}
+              </label>
+              <textarea
+                className="input resize-none w-full"
+                rows={4}
+                placeholder="Скопируйте и вставьте сюда текст подписи из Instagram-поста конкурента…"
+                value={postCaption}
+                onChange={(e) => setPostCaption(e.target.value)}
+              />
+            </div>
+
+            {/* Carousel slide description */}
+            <div>
+              <label className="label">Опишите слайды карусели <span className="text-gray-500 font-normal">(необязательно)</span></label>
               <textarea
                 className="input resize-none w-full"
                 rows={3}
