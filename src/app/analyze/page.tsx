@@ -1,11 +1,13 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useRef } from 'react';
 import { useRouter } from 'next/navigation';
 
+/* ── Types ────────────────────────────────────────────────────────────────── */
 interface AnalyzedSlide {
   type: 'image' | 'video';
   url: string;
+  storedUrl?: string;
 }
 
 interface AnalyzedPost {
@@ -14,27 +16,67 @@ interface AnalyzedPost {
   slides: AnalyzedSlide[];
   isCarousel: boolean;
   authorUsername?: string;
+  embedHtml?: string;
 }
+
+type ImageProvider = 'none' | 'dalle' | 'flux-schnell' | 'flux-dev' | 'flux-pro' | 'ideogram' | 'sdxl';
 
 interface GenerateOptions {
   niche: string;
   tone: string;
   brandName: string;
   additionalInstructions: string;
-  imageProvider: 'none' | 'dalle' | 'flux-schnell' | 'flux-dev';
+  imageProvider: ImageProvider;
   slideCount: number;
 }
 
-type Step = 'input' | 'analyzed' | 'generating' | 'done';
-type ContextSource = 'manual' | 'url';
+type Step = 1 | 2 | 3 | 4;
+type ContextSource = 'file' | 'url' | 'manual';
 
+const SLIDE_COLORS = [
+  'from-purple-700 to-purple-900',
+  'from-blue-700 to-blue-900',
+  'from-pink-700 to-pink-900',
+  'from-indigo-700 to-indigo-900',
+  'from-teal-700 to-teal-900',
+  'from-orange-700 to-orange-900',
+  'from-rose-700 to-rose-900',
+  'from-cyan-700 to-cyan-900',
+];
+
+const IMAGE_PROVIDERS: { value: ImageProvider; label: string; badge?: string }[] = [
+  { value: 'none', label: 'Без изображений' },
+  { value: 'dalle', label: 'DALL-E 3', badge: 'OpenAI' },
+  { value: 'flux-schnell', label: 'Flux Schnell', badge: 'Быстрый' },
+  { value: 'flux-dev', label: 'Flux Dev', badge: 'Качество' },
+  { value: 'flux-pro', label: 'Flux 1.1 Pro', badge: 'Лучший Flux' },
+  { value: 'ideogram', label: 'Ideogram v2', badge: 'Топ для соцсетей' },
+  { value: 'sdxl', label: 'Stable Diffusion XL', badge: 'Бесплатно' },
+];
+
+/* ── Component ────────────────────────────────────────────────────────────── */
 export default function AnalyzePage() {
   const router = useRouter();
-  const [step, setStep] = useState<Step>('input');
-  const [url, setUrl] = useState('');
-  const [loading, setLoading] = useState(false);
-  const [error, setError] = useState('');
+
+  const [step, setStep] = useState<Step>(1);
+  const [globalLoading, setGlobalLoading] = useState(false);
+  const [globalError, setGlobalError] = useState('');
+
+  // Step 1
+  const [igUrl, setIgUrl] = useState('');
   const [analyzed, setAnalyzed] = useState<AnalyzedPost | null>(null);
+  const [carouselHint, setCarouselHint] = useState('');
+
+  // Step 2
+  const [contextSource, setContextSource] = useState<ContextSource>('file');
+  const [projectContext, setProjectContext] = useState('');
+  const [contextTitle, setContextTitle] = useState('');
+  const [contextUrl, setContextUrl] = useState('');
+  const [contextLoading, setContextLoading] = useState(false);
+  const [contextError, setContextError] = useState('');
+  const fileInputRef = useRef<HTMLInputElement>(null);
+
+  // Step 3
   const [options, setOptions] = useState<GenerateOptions>({
     niche: '',
     tone: 'engaging and professional',
@@ -44,42 +86,51 @@ export default function AnalyzePage() {
     slideCount: 5,
   });
 
-  // Manual carousel description
-  const [carouselDescription, setCarouselDescription] = useState('');
-
-  // Context state
-  const [contextSource, setContextSource] = useState<ContextSource>('manual');
-  const [contextUrl, setContextUrl] = useState('');
-  const [projectContext, setProjectContext] = useState('');
-  const [contextLoading, setContextLoading] = useState(false);
-  const [contextError, setContextError] = useState('');
-  const [contextTitle, setContextTitle] = useState('');
-
+  /* ── Step 1: Analyze ───────────────────────────────────────────────────── */
   async function handleAnalyze() {
-    if (!url.trim()) { setError('Введите URL Instagram-поста'); return; }
-    setError('');
-    setLoading(true);
+    if (!igUrl.trim()) { setGlobalError('Введите URL Instagram-поста'); return; }
+    setGlobalError('');
+    setGlobalLoading(true);
     try {
       const res = await fetch('/api/analyze', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ url: url.trim() }),
+        body: JSON.stringify({ url: igUrl.trim() }),
       });
       const data = await res.json();
       if (!res.ok) throw new Error(data.error || 'Не удалось проанализировать пост');
       setAnalyzed(data);
-      if (data.slides?.length > 1) {
-        setOptions((o) => ({ ...o, slideCount: data.slides.length }));
-      }
-      setStep('analyzed');
+      if (data.slides?.length > 1) setOptions((o) => ({ ...o, slideCount: data.slides.length }));
+      setStep(2);
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Неизвестная ошибка');
+      setGlobalError(err instanceof Error ? err.message : 'Ошибка анализа');
     } finally {
-      setLoading(false);
+      setGlobalLoading(false);
     }
   }
 
-  async function handleFetchContext() {
+  /* ── Step 2: Context ───────────────────────────────────────────────────── */
+  async function handleFileUpload(e: React.ChangeEvent<HTMLInputElement>) {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    setContextError('');
+    setContextLoading(true);
+    try {
+      const form = new FormData();
+      form.append('file', file);
+      const res = await fetch('/api/upload-context', { method: 'POST', body: form });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || 'Ошибка загрузки файла');
+      setProjectContext(data.text || '');
+      setContextTitle(data.title || file.name);
+    } catch (err) {
+      setContextError(err instanceof Error ? err.message : 'Ошибка загрузки');
+    } finally {
+      setContextLoading(false);
+    }
+  }
+
+  async function handleFetchUrl() {
     if (!contextUrl.trim()) { setContextError('Введите URL'); return; }
     setContextError('');
     setContextLoading(true);
@@ -90,9 +141,9 @@ export default function AnalyzePage() {
         body: JSON.stringify({ url: contextUrl.trim() }),
       });
       const data = await res.json();
-      if (!res.ok) throw new Error(data.error || 'Не удалось загрузить контекст');
+      if (!res.ok) throw new Error(data.error || 'Ошибка загрузки');
       setProjectContext(data.text || '');
-      if (data.title) setContextTitle(data.title);
+      setContextTitle(data.title || contextUrl);
     } catch (err) {
       setContextError(err instanceof Error ? err.message : 'Ошибка загрузки');
     } finally {
@@ -100,15 +151,16 @@ export default function AnalyzePage() {
     }
   }
 
+  /* ── Step 4: Generate ──────────────────────────────────────────────────── */
   async function handleGenerate() {
     if (!analyzed) return;
-    setError('');
-    setLoading(true);
-    setStep('generating');
+    setGlobalError('');
+    setGlobalLoading(true);
+    setStep(4);
     try {
       const extraContext = [
-        projectContext ? `Контекст проекта:\n${projectContext}` : '',
-        carouselDescription ? `Описание оригинальной карусели:\n${carouselDescription}` : '',
+        projectContext ? `Контекст проекта / ДНК клиента:\n${projectContext}` : '',
+        carouselHint ? `Описание оригинальной карусели конкурента:\n${carouselHint}` : '',
         options.additionalInstructions,
       ].filter(Boolean).join('\n\n');
 
@@ -128,255 +180,304 @@ export default function AnalyzePage() {
       });
       const data = await res.json();
       if (!res.ok) throw new Error(data.error || 'Не удалось сгенерировать карусель');
-      setStep('done');
       router.push(`/carousel/${data.id}`);
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Неизвестная ошибка');
-      setStep('analyzed');
+      setGlobalError(err instanceof Error ? err.message : 'Ошибка генерации');
+      setStep(3);
     } finally {
-      setLoading(false);
+      setGlobalLoading(false);
     }
   }
 
-  const slideColors = [
-    'bg-purple-800', 'bg-blue-800', 'bg-pink-800', 'bg-indigo-800',
-    'bg-teal-800', 'bg-orange-800', 'bg-rose-800', 'bg-cyan-800',
-  ];
+  /* ── Slide display image ───────────────────────────────────────────────── */
+  function SlideThumb({ slide, index }: { slide: AnalyzedSlide; index: number }) {
+    const displayUrl = slide.storedUrl || slide.url;
+    const [imgFailed, setImgFailed] = useState(false);
 
-  const gotCaption = analyzed && analyzed.caption && analyzed.caption.length > 0;
-  const gotSlides = analyzed && analyzed.slides && analyzed.slides.length > 0;
+    if (slide.type === 'image' && displayUrl && !imgFailed) {
+      return (
+        <img
+          src={displayUrl}
+          alt={`Слайд ${index + 1}`}
+          className="w-full h-full object-cover"
+          crossOrigin="anonymous"
+          onError={() => setImgFailed(true)}
+        />
+      );
+    }
+    return (
+      <div className={`w-full h-full flex flex-col items-center justify-center bg-gradient-to-br ${SLIDE_COLORS[index % SLIDE_COLORS.length]}`}>
+        <span className="text-white font-bold text-xl">{index + 1}</span>
+        {slide.type === 'video' && <span className="text-xs text-white/70 mt-1">видео</span>}
+      </div>
+    );
+  }
 
+  /* ── Step indicator ────────────────────────────────────────────────────── */
+  function StepBadge({ n, label, active, done }: { n: number; label: string; active: boolean; done: boolean }) {
+    return (
+      <div className={`flex items-center gap-2 ${active ? 'text-white' : done ? 'text-green-400' : 'text-gray-600'}`}>
+        <div className={`w-7 h-7 rounded-full flex items-center justify-center text-xs font-bold border
+          ${active ? 'bg-purple-600 border-purple-500' : done ? 'bg-green-700 border-green-600' : 'border-gray-700 bg-gray-800'}`}>
+          {done ? '✓' : n}
+        </div>
+        <span className="text-sm hidden sm:block">{label}</span>
+      </div>
+    );
+  }
+
+  /* ── Render ────────────────────────────────────────────────────────────── */
   return (
-    <div className="space-y-6 max-w-2xl">
+    <div className="max-w-2xl space-y-6">
+
+      {/* Header */}
       <div>
         <h1 className="text-2xl font-bold text-white">Новый карусель</h1>
-        <p className="text-gray-400 text-sm mt-1">
-          Вставьте ссылку на Instagram-пост → ИИ анализирует → генерирует уникальный карусель
-        </p>
+        <p className="text-gray-400 text-sm mt-1">Анализ конкурента → ваш контекст → уникальный карусель</p>
       </div>
 
-      {/* Step 1: URL Input */}
-      <div className="card">
-        <h2 className="text-base font-semibold text-white mb-3">
-          <span className="inline-flex items-center justify-center w-6 h-6 rounded-full bg-purple-700 text-xs mr-2">1</span>
-          URL Instagram-поста
-        </h2>
-        <div className="flex gap-2">
-          <input
-            className="input flex-1"
-            placeholder="https://www.instagram.com/p/ABC123/"
-            value={url}
-            onChange={(e) => setUrl(e.target.value)}
-            onKeyDown={(e) => e.key === 'Enter' && step === 'input' && handleAnalyze()}
-            disabled={loading || step !== 'input'}
-          />
-          <button
-            className="btn-primary px-5"
-            onClick={handleAnalyze}
-            disabled={loading || !url.trim() || step !== 'input'}
-          >
-            {loading && step === 'input' ? 'Анализ...' : 'Анализировать'}
-          </button>
-        </div>
-        {step !== 'input' && (
-          <button
-            className="mt-2 text-xs text-gray-500 hover:text-gray-300 transition-colors"
-            onClick={() => { setStep('input'); setAnalyzed(null); setError(''); setCarouselDescription(''); }}
-          >
-            ← Использовать другой URL
-          </button>
-        )}
+      {/* Step indicators */}
+      <div className="flex items-center gap-3 flex-wrap">
+        <StepBadge n={1} label="Instagram" active={step === 1} done={step > 1} />
+        <div className="w-6 h-px bg-gray-700 hidden sm:block" />
+        <StepBadge n={2} label="Контекст" active={step === 2} done={step > 2} />
+        <div className="w-6 h-px bg-gray-700 hidden sm:block" />
+        <StepBadge n={3} label="Параметры" active={step === 3} done={step > 3} />
+        <div className="w-6 h-px bg-gray-700 hidden sm:block" />
+        <StepBadge n={4} label="Генерация" active={step === 4} done={false} />
       </div>
 
-      {/* Step 2: Review Analyzed Post */}
-      {analyzed && (step === 'analyzed' || step === 'generating' || step === 'done') && (
-        <div className="card">
-          <h2 className="text-base font-semibold text-white mb-3">
-            <span className="inline-flex items-center justify-center w-6 h-6 rounded-full bg-purple-700 text-xs mr-2">2</span>
-            Анализ поста
-            {gotCaption && <span className="ml-2 text-xs text-green-400">✓ текст получен</span>}
+      {/* ── STEP 1: Instagram ─────────────────────────────────────────── */}
+      {step === 1 && (
+        <div className="card space-y-4">
+          <h2 className="text-base font-semibold text-white">
+            Шаг 1 — Карусель конкурента
           </h2>
+          <p className="text-sm text-gray-400">
+            Вставьте ссылку на публичный Instagram-пост. Приложение вытянет фотографии и текст.
+          </p>
 
-          {analyzed.authorUsername && (
-            <p className="text-sm text-gray-400 mb-3">Источник: @{analyzed.authorUsername}</p>
-          )}
-
-          {/* Slides grid */}
-          {gotSlides && (
-            <div className="flex gap-2 overflow-x-auto pb-2 mb-3">
-              {analyzed.slides.slice(0, 8).map((slide, i) => (
-                <div key={i} className="flex-shrink-0 w-20 h-20 rounded-lg bg-gray-800 overflow-hidden border border-gray-700">
-                  {slide.type === 'image' && slide.url ? (
-                    <img
-                      src={slide.url}
-                      alt={`Слайд ${i + 1}`}
-                      className="w-full h-full object-cover"
-                      crossOrigin="anonymous"
-                      onError={(e) => {
-                        const target = e.currentTarget;
-                        target.style.display = 'none';
-                        const parent = target.parentElement;
-                        if (parent) {
-                          parent.classList.add(slideColors[i % slideColors.length]);
-                          parent.innerHTML = `<div class="w-full h-full flex items-center justify-center text-white font-bold text-lg">${i + 1}</div>`;
-                        }
-                      }}
-                    />
-                  ) : (
-                    <div className={`w-full h-full flex items-center justify-center ${slideColors[i % slideColors.length]}`}>
-                      {slide.type === 'video' ? (
-                        <span className="text-2xl">🎬</span>
-                      ) : (
-                        <span className="text-white font-bold text-lg">{i + 1}</span>
-                      )}
-                    </div>
-                  )}
-                </div>
-              ))}
-              {analyzed.slides.length > 8 && (
-                <div className="flex-shrink-0 w-20 h-20 rounded-lg bg-gray-800 border border-gray-700 flex items-center justify-center text-sm text-gray-500">
-                  +{analyzed.slides.length - 8}
-                </div>
-              )}
-            </div>
-          )}
-
-          {/* Instagram limitation notice */}
-          <div className="bg-yellow-900/20 border border-yellow-700/30 rounded-lg p-3 mb-3 text-xs text-yellow-300">
-            <p className="font-medium mb-1">ℹ️ О доступе к Instagram</p>
-            <p className="text-yellow-400/80">
-              Instagram ограничивает доступ к изображениям слайдов с серверов.
-              Подпись к посту {gotCaption ? 'загружена' : 'недоступна'}.
-              Опишите карусель вручную ниже — Claude создаст точный аналог.
-            </p>
+          <div className="flex gap-2">
+            <input
+              className="input flex-1"
+              placeholder="https://www.instagram.com/p/ABC123/"
+              value={igUrl}
+              onChange={(e) => setIgUrl(e.target.value)}
+              onKeyDown={(e) => e.key === 'Enter' && !globalLoading && handleAnalyze()}
+              disabled={globalLoading}
+            />
+            <button
+              className="btn-primary px-5"
+              onClick={handleAnalyze}
+              disabled={globalLoading || !igUrl.trim()}
+            >
+              {globalLoading ? '⏳' : 'Анализировать →'}
+            </button>
           </div>
 
-          {analyzed.caption && (
-            <div className="bg-gray-800 rounded-lg p-3 text-sm text-gray-300 max-h-24 overflow-y-auto mb-3">
-              <p className="text-xs text-gray-500 mb-1">Подпись из Instagram:</p>
-              {analyzed.caption.slice(0, 400)}{analyzed.caption.length > 400 ? '...' : ''}
-            </div>
-          )}
-
-          {/* Manual carousel description */}
-          <div>
-            <label className="label">Опишите, что было в карусели (необязательно, но улучшает результат)</label>
-            <textarea
-              className="input resize-none w-full"
-              rows={3}
-              placeholder="Например: 5 слайдов о продуктивности. Слайд 1 — заголовок '5 привычек успешных людей'. Слайд 2 — про утренний ритуал. И т.д."
-              value={carouselDescription}
-              onChange={(e) => setCarouselDescription(e.target.value)}
-            />
+          <div className="bg-blue-950/40 border border-blue-800/30 rounded-lg p-3 text-xs text-blue-300 space-y-1">
+            <p className="font-medium">ℹ️ Что происходит:</p>
+            <p>Приложение скачивает фотографии карусели на свой сервер и читает подпись к посту. Instagram иногда ограничивает доступ — тогда вы сможете описать слайды вручную на следующем шаге.</p>
           </div>
         </div>
       )}
 
-      {/* Step 3: Project Context */}
-      {(step === 'analyzed' || step === 'generating') && (
-        <div className="card">
-          <h2 className="text-base font-semibold text-white mb-4">
-            <span className="inline-flex items-center justify-center w-6 h-6 rounded-full bg-purple-700 text-xs mr-2">3</span>
-            Контекст проекта
-            <span className="ml-2 text-xs text-gray-500">(необязательно)</span>
-          </h2>
+      {/* ── STEP 2: Context ───────────────────────────────────────────── */}
+      {step === 2 && analyzed && (
+        <div className="space-y-4">
 
-          {/* Source tabs */}
-          <div className="flex gap-2 mb-4">
-            {([
-              { key: 'manual', label: 'Ввести вручную' },
-              { key: 'url', label: 'Загрузить с URL / Notion / Google Docs' },
-            ] as { key: ContextSource; label: string }[]).map(({ key, label }) => (
-              <button
-                key={key}
-                onClick={() => setContextSource(key)}
-                className={`px-3 py-1.5 rounded-lg text-xs font-medium transition-all ${
-                  contextSource === key
-                    ? 'bg-purple-700 text-white'
-                    : 'bg-gray-800 text-gray-400 hover:text-gray-200 hover:bg-gray-700'
-                }`}
-              >
-                {label}
+          {/* Результат анализа */}
+          <div className="card space-y-3">
+            <div className="flex items-center justify-between">
+              <h2 className="text-base font-semibold text-white">Карусель проанализирована ✓</h2>
+              <button className="text-xs text-gray-500 hover:text-gray-300" onClick={() => { setStep(1); setAnalyzed(null); }}>
+                ← Изменить
               </button>
-            ))}
-          </div>
+            </div>
 
-          {/* Manual input */}
-          {contextSource === 'manual' && (
-            <>
+            {analyzed.authorUsername && (
+              <p className="text-sm text-gray-400">@{analyzed.authorUsername}</p>
+            )}
+
+            {/* Slides */}
+            {analyzed.slides.length > 0 ? (
+              <div className="flex gap-2 overflow-x-auto pb-1">
+                {analyzed.slides.slice(0, 10).map((slide, i) => (
+                  <div key={i} className="flex-shrink-0 w-24 h-24 rounded-xl overflow-hidden border border-gray-700">
+                    <SlideThumb slide={slide} index={i} />
+                  </div>
+                ))}
+                {analyzed.slides.length > 10 && (
+                  <div className="flex-shrink-0 w-24 h-24 rounded-xl bg-gray-800 border border-gray-700 flex items-center justify-center text-gray-500 text-sm">
+                    +{analyzed.slides.length - 10}
+                  </div>
+                )}
+              </div>
+            ) : (
+              <div className="bg-yellow-950/30 border border-yellow-700/30 rounded-lg p-3 text-xs text-yellow-300">
+                Instagram заблокировал загрузку изображений с сервера. Опишите слайды ниже — Claude всё равно создаст аналог.
+              </div>
+            )}
+
+            {analyzed.caption && (
+              <div className="bg-gray-800/80 rounded-lg p-3 text-sm text-gray-300 max-h-28 overflow-y-auto">
+                <p className="text-xs text-gray-500 mb-1">Текст поста:</p>
+                {analyzed.caption.slice(0, 500)}{analyzed.caption.length > 500 ? '…' : ''}
+              </div>
+            )}
+
+            {/* Hint about slides */}
+            <div>
+              <label className="label">Опишите карусель (необязательно — улучшает результат)</label>
               <textarea
                 className="input resize-none w-full"
-                rows={4}
-                placeholder="Опишите ваш проект, целевую аудиторию, ключевые ценности, тематику..."
+                rows={3}
+                placeholder="Например: 6 слайдов о продуктивности. Слайд 1 — заголовок '5 привычек'. Слайд 2 — про утро. Слайд 3 — про фокус…"
+                value={carouselHint}
+                onChange={(e) => setCarouselHint(e.target.value)}
+              />
+            </div>
+          </div>
+
+          {/* Контекст */}
+          <div className="card space-y-4">
+            <h2 className="text-base font-semibold text-white">
+              Шаг 2 — Ваш контекст / ДНК клиента
+              <span className="ml-2 text-xs text-gray-500 font-normal">(необязательно)</span>
+            </h2>
+            <p className="text-sm text-gray-400">
+              Загрузите файл с описанием вашего проекта, нишей, аудиторией — Claude будет адаптировать контент под вас.
+            </p>
+
+            {/* Tabs */}
+            <div className="flex gap-2">
+              {([
+                { key: 'file', icon: '📁', label: 'Файл' },
+                { key: 'url', icon: '🔗', label: 'Notion / Google Docs / URL' },
+                { key: 'manual', icon: '✏️', label: 'Вручную' },
+              ] as { key: ContextSource; icon: string; label: string }[]).map(({ key, icon, label }) => (
+                <button
+                  key={key}
+                  onClick={() => { setContextSource(key); setContextError(''); }}
+                  className={`flex items-center gap-1.5 px-3 py-2 rounded-lg text-xs font-medium transition-all ${
+                    contextSource === key
+                      ? 'bg-purple-700 text-white'
+                      : 'bg-gray-800 text-gray-400 hover:text-white hover:bg-gray-700'
+                  }`}
+                >
+                  <span>{icon}</span>
+                  <span className="hidden sm:inline">{label}</span>
+                </button>
+              ))}
+            </div>
+
+            {/* File upload */}
+            {contextSource === 'file' && (
+              <div className="space-y-3">
+                <div
+                  className="border-2 border-dashed border-gray-700 rounded-xl p-6 text-center cursor-pointer hover:border-purple-600 transition-colors"
+                  onClick={() => fileInputRef.current?.click()}
+                >
+                  <div className="text-3xl mb-2">📄</div>
+                  <p className="text-sm text-gray-400">Нажмите чтобы выбрать файл</p>
+                  <p className="text-xs text-gray-600 mt-1">PDF, DOCX, TXT — макс. 5 МБ</p>
+                  {contextLoading && <p className="text-xs text-purple-400 mt-2">⏳ Читаю файл…</p>}
+                </div>
+                <input
+                  ref={fileInputRef}
+                  type="file"
+                  accept=".pdf,.docx,.txt,.md"
+                  className="hidden"
+                  onChange={handleFileUpload}
+                />
+              </div>
+            )}
+
+            {/* URL (Notion / Google Docs) */}
+            {contextSource === 'url' && (
+              <div className="space-y-3">
+                <div className="bg-blue-950/30 border border-blue-800/30 rounded-lg p-3 text-xs text-blue-300 space-y-1">
+                  <p className="font-medium">Поддерживаемые источники:</p>
+                  <p>• <strong>Google Docs</strong> — откройте доступ «для всех по ссылке» → вставьте ссылку</p>
+                  <p>• <strong>Notion</strong> — Share → Publish to web → вставьте ссылку</p>
+                  <p>• <strong>Google NotebookLM</strong> — экспортируйте как Google Doc → вставьте ссылку</p>
+                  <p>• Любой публичный сайт</p>
+                </div>
+                <div className="flex gap-2">
+                  <input
+                    className="input flex-1"
+                    placeholder="https://docs.google.com/... или notion.so/..."
+                    value={contextUrl}
+                    onChange={(e) => setContextUrl(e.target.value)}
+                    onKeyDown={(e) => e.key === 'Enter' && !contextLoading && handleFetchUrl()}
+                  />
+                  <button
+                    className="btn-secondary px-4"
+                    onClick={handleFetchUrl}
+                    disabled={contextLoading || !contextUrl.trim()}
+                  >
+                    {contextLoading ? '⏳' : 'Загрузить'}
+                  </button>
+                </div>
+              </div>
+            )}
+
+            {/* Manual */}
+            {contextSource === 'manual' && (
+              <textarea
+                className="input resize-none w-full"
+                rows={5}
+                placeholder="Опишите ваш проект, нишу, целевую аудиторию, уникальное торговое предложение, тон общения, ключевые ценности…"
                 value={projectContext}
                 onChange={(e) => setProjectContext(e.target.value)}
               />
-              {projectContext && (
-                <p className="text-xs text-gray-600 mt-1">{projectContext.length} символов</p>
-              )}
-            </>
-          )}
+            )}
 
-          {/* URL input */}
-          {contextSource === 'url' && (
-            <div className="space-y-3">
-              <div className="bg-blue-900/20 border border-blue-700/30 rounded-lg p-3 text-xs text-blue-300">
-                <p className="font-medium mb-1">Поддерживается:</p>
-                <ul className="text-blue-400/80 space-y-0.5">
-                  <li>• <strong>Google Docs</strong> — документ должен быть открыт (доступ «для всех по ссылке»)</li>
-                  <li>• <strong>Notion</strong> — страница должна быть публичной (Share → Publish to web)</li>
-                  <li>• <strong>Любой сайт</strong> — публичные страницы</li>
-                </ul>
+            {/* Error */}
+            {contextError && (
+              <div className="bg-red-950/30 border border-red-700/30 rounded-lg p-3 text-xs text-red-300">
+                ⚠️ {contextError}
               </div>
-              <div className="flex gap-2">
-                <input
-                  className="input flex-1"
-                  placeholder="https://docs.google.com/... или notion.so/... или любой URL"
-                  value={contextUrl}
-                  onChange={(e) => setContextUrl(e.target.value)}
-                  onKeyDown={(e) => e.key === 'Enter' && handleFetchContext()}
-                />
-                <button
-                  className="btn-secondary px-4"
-                  onClick={handleFetchContext}
-                  disabled={contextLoading || !contextUrl.trim()}
-                >
-                  {contextLoading ? '⏳' : 'Загрузить'}
-                </button>
-              </div>
-              {contextError && (
-                <p className="text-red-400 text-xs bg-red-900/20 border border-red-700/30 rounded p-2">
-                  ⚠️ {contextError}
-                </p>
-              )}
-              {projectContext && (
-                <div className="bg-gray-800 rounded-lg p-3">
-                  {contextTitle && <p className="text-xs text-purple-400 mb-1 font-medium">✓ {contextTitle}</p>}
-                  <p className="text-xs text-gray-400 leading-relaxed">
-                    {projectContext.slice(0, 600)}{projectContext.length > 600 ? '...' : ''}
-                  </p>
-                  <p className="text-xs text-gray-600 mt-2">Загружено: {projectContext.length} символов</p>
+            )}
+
+            {/* Loaded preview */}
+            {projectContext && (contextSource === 'file' || contextSource === 'url') && (
+              <div className="bg-gray-800/60 rounded-lg p-3 space-y-1">
+                <div className="flex items-center justify-between">
+                  <p className="text-xs text-green-400 font-medium">✓ {contextTitle || 'Контекст загружен'}</p>
+                  <button className="text-xs text-gray-600 hover:text-gray-400" onClick={() => { setProjectContext(''); setContextTitle(''); }}>
+                    Удалить
+                  </button>
                 </div>
-              )}
-            </div>
-          )}
+                <p className="text-xs text-gray-500">{projectContext.length.toLocaleString()} символов</p>
+                <p className="text-xs text-gray-500 line-clamp-3 leading-relaxed">
+                  {projectContext.slice(0, 200)}…
+                </p>
+              </div>
+            )}
+          </div>
+
+          <div className="flex gap-3">
+            <button className="btn-secondary flex-1" onClick={() => setStep(1)}>← Назад</button>
+            <button className="btn-primary flex-1" onClick={() => setStep(3)}>Далее →</button>
+          </div>
         </div>
       )}
 
-      {/* Step 4: Generation Options */}
-      {(step === 'analyzed' || step === 'generating') && (
-        <div className="card">
-          <h2 className="text-base font-semibold text-white mb-4">
-            <span className="inline-flex items-center justify-center w-6 h-6 rounded-full bg-purple-700 text-xs mr-2">4</span>
-            Параметры генерации
-          </h2>
+      {/* ── STEP 3: Options ───────────────────────────────────────────── */}
+      {step === 3 && (
+        <div className="card space-y-5">
+          <div className="flex items-center justify-between">
+            <h2 className="text-base font-semibold text-white">Шаг 3 — Параметры генерации</h2>
+            <button className="text-xs text-gray-500 hover:text-gray-300" onClick={() => setStep(2)}>← Назад</button>
+          </div>
 
           <div className="grid grid-cols-2 gap-4">
             <div>
               <label className="label">Ниша / Тема</label>
               <input
                 className="input"
-                placeholder="например, фитнес, маркетинг..."
+                placeholder="фитнес, маркетинг, мышление…"
                 value={options.niche}
                 onChange={(e) => setOptions({ ...options, niche: e.target.value })}
               />
@@ -390,21 +491,20 @@ export default function AnalyzePage() {
                 onChange={(e) => setOptions({ ...options, brandName: e.target.value })}
               />
             </div>
+
             <div>
               <label className="label">Тон</label>
-              <select
-                className="input"
-                value={options.tone}
-                onChange={(e) => setOptions({ ...options, tone: e.target.value })}
-              >
+              <select className="input" value={options.tone} onChange={(e) => setOptions({ ...options, tone: e.target.value })}>
                 <option value="engaging and professional">Вовлекающий и профессиональный</option>
                 <option value="casual and friendly">Неформальный и дружелюбный</option>
                 <option value="educational and informative">Образовательный</option>
                 <option value="motivational and inspiring">Мотивирующий</option>
                 <option value="witty and humorous">Остроумный и юмористический</option>
                 <option value="luxury and premium">Люкс и премиум</option>
+                <option value="bold and direct">Дерзкий и прямой</option>
               </select>
             </div>
+
             <div>
               <label className="label">Количество слайдов</label>
               <input
@@ -416,75 +516,91 @@ export default function AnalyzePage() {
                 onChange={(e) => setOptions({ ...options, slideCount: parseInt(e.target.value) || 5 })}
               />
             </div>
-            <div className="col-span-2">
-              <label className="label">Генерация изображений</label>
-              <select
-                className="input"
-                value={options.imageProvider}
-                onChange={(e) => setOptions({ ...options, imageProvider: e.target.value as GenerateOptions['imageProvider'] })}
-              >
-                <option value="none">Не генерировать картинки</option>
-                <option value="dalle">DALL-E 3 (OpenAI) — нужен OPENAI_API_KEY</option>
-                <option value="flux-schnell">Flux Schnell (Replicate) — быстрый</option>
-                <option value="flux-dev">Flux Dev (Replicate) — качественный</option>
-              </select>
+          </div>
+
+          {/* Image provider */}
+          <div>
+            <label className="label">Генерация изображений</label>
+            <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
+              {IMAGE_PROVIDERS.map(({ value, label, badge }) => (
+                <button
+                  key={value}
+                  onClick={() => setOptions({ ...options, imageProvider: value })}
+                  className={`p-3 rounded-xl border text-left transition-all ${
+                    options.imageProvider === value
+                      ? 'border-purple-500 bg-purple-900/30 text-white'
+                      : 'border-gray-700 bg-gray-800/50 text-gray-400 hover:border-gray-500 hover:text-gray-200'
+                  }`}
+                >
+                  <p className="text-sm font-medium">{label}</p>
+                  {badge && <p className="text-xs text-gray-500 mt-0.5">{badge}</p>}
+                </button>
+              ))}
             </div>
-            <div className="col-span-2">
-              <label className="label">Дополнительные инструкции</label>
-              <textarea
-                className="input resize-none"
-                rows={2}
-                placeholder="Конкретные запросы, что включить или избегать..."
-                value={options.additionalInstructions}
-                onChange={(e) => setOptions({ ...options, additionalInstructions: e.target.value })}
-              />
-            </div>
+            {options.imageProvider !== 'none' && (
+              <p className="text-xs text-gray-600 mt-2">
+                Генерация изображений займёт 1–4 минуты. {options.imageProvider === 'ideogram' && 'Требует IDEOGRAM_API_KEY в Vercel.'}
+                {(options.imageProvider === 'flux-schnell' || options.imageProvider === 'flux-dev' || options.imageProvider === 'flux-pro' || options.imageProvider === 'sdxl') && 'Требует REPLICATE_API_TOKEN в Vercel.'}
+                {options.imageProvider === 'dalle' && 'Требует OPENAI_API_KEY в Vercel.'}
+              </p>
+            )}
+          </div>
+
+          <div>
+            <label className="label">Дополнительные инструкции</label>
+            <textarea
+              className="input resize-none w-full"
+              rows={2}
+              placeholder="Что включить, что избегать, особый стиль…"
+              value={options.additionalInstructions}
+              onChange={(e) => setOptions({ ...options, additionalInstructions: e.target.value })}
+            />
           </div>
 
           <button
-            className="btn-primary mt-5 w-full justify-center"
+            className="btn-primary w-full justify-center text-base py-3"
             onClick={handleGenerate}
-            disabled={loading}
+            disabled={globalLoading}
           >
-            {loading ? (
-              <><span className="animate-spin mr-2">⏳</span>Генерация карусели...</>
-            ) : (
-              <>✨ Сгенерировать карусель</>
-            )}
+            ✨ Создать карусель
           </button>
-
-          {options.imageProvider !== 'none' && (
-            <p className="text-xs text-gray-600 mt-2 text-center">
-              Генерация изображений занимает 1–3 минуты
-            </p>
-          )}
         </div>
       )}
 
-      {/* Generating state */}
-      {step === 'generating' && (
-        <div className="card text-center py-8">
-          <div className="text-4xl mb-3 animate-bounce">🤖</div>
-          <p className="text-white font-semibold mb-1">Claude анализирует и генерирует...</p>
-          <p className="text-gray-500 text-sm">Создание уникального текста и изображений</p>
-          <div className="mt-4 flex justify-center gap-1">
-            {[0, 1, 2].map((i) => (
-              <div key={i} className="w-2 h-2 bg-purple-500 rounded-full animate-bounce" style={{ animationDelay: `${i * 0.15}s` }} />
+      {/* ── STEP 4: Generating ────────────────────────────────────────── */}
+      {step === 4 && (
+        <div className="card text-center py-12 space-y-4">
+          <div className="text-5xl animate-bounce">🤖</div>
+          <h2 className="text-white text-xl font-semibold">Claude создаёт карусель…</h2>
+          <p className="text-gray-400 text-sm">
+            Анализирую оригинал, пишу уникальный текст
+            {options.imageProvider !== 'none' ? ', генерирую изображения' : ''}
+          </p>
+          <div className="flex justify-center gap-1.5 pt-2">
+            {[0, 1, 2, 3].map((i) => (
+              <div
+                key={i}
+                className="w-2 h-2 bg-purple-500 rounded-full animate-bounce"
+                style={{ animationDelay: `${i * 0.15}s` }}
+              />
             ))}
           </div>
+          <p className="text-xs text-gray-600">
+            {options.imageProvider !== 'none' ? 'Займёт 2–4 минуты' : 'Займёт около 30 секунд'}
+          </p>
         </div>
       )}
 
-      {/* Error */}
-      {error && (
-        <div className="bg-red-900/30 border border-red-700/50 rounded-lg p-4 text-red-400 text-sm">
-          <p className="font-medium mb-1">⚠️ Ошибка</p>
-          <p>{error}</p>
-          {error.includes('authentication') || error.includes('401') || error.includes('x-api-key') ? (
-            <p className="mt-2 text-red-300/70 text-xs">
-              Проблема с API ключом. Зайдите в Vercel → Settings → Environment Variables и проверьте ANTHROPIC_API_KEY (должен начинаться с <code>sk-ant-</code>).
+      {/* Global error */}
+      {globalError && (
+        <div className="bg-red-950/40 border border-red-700/40 rounded-xl p-4 text-red-300 text-sm space-y-1">
+          <p className="font-medium">⚠️ Ошибка</p>
+          <p>{globalError}</p>
+          {(globalError.includes('authentication') || globalError.includes('401') || globalError.includes('api-key')) && (
+            <p className="text-red-400/70 text-xs">
+              Проверьте ANTHROPIC_API_KEY в Vercel → Settings → Environment Variables. Ключ должен начинаться с <code>sk-ant-</code>.
             </p>
-          ) : null}
+          )}
         </div>
       )}
     </div>
