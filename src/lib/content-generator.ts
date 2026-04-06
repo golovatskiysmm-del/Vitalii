@@ -28,6 +28,7 @@ export async function analyzeAndGenerate(
     tone?: string;
     brandName?: string;
     additionalInstructions?: string;
+    slideCount?: number;
   } = {}
 ): Promise<GeneratedCarousel> {
   const anthropic = getClient();
@@ -81,7 +82,7 @@ Return a JSON object with this exact structure:
   ]
 }
 
-Create ${Math.min(post.slides.length, 7)} slides minimum. Make each slide stand alone but flow together as a story.`;
+Create exactly ${userContext.slideCount || Math.max(post.slides.length || 0, 5)} slides. Make each slide stand alone but flow together as a story.`;
 
   const messages: Anthropic.MessageParam[] = [
     {

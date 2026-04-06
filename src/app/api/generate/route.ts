@@ -8,7 +8,7 @@ export const maxDuration = 120;
 
 export async function POST(req: NextRequest) {
   try {
-    const { analyzedPostId, niche, tone, brandName, additionalInstructions, avatarId, generateImages, imageProvider } = await req.json();
+    const { analyzedPostId, niche, tone, brandName, additionalInstructions, avatarId, generateImages, imageProvider, slideCount } = await req.json();
 
     if (!analyzedPostId) {
       return NextResponse.json({ error: 'analyzedPostId is required' }, { status: 400 });
@@ -19,16 +19,18 @@ export async function POST(req: NextRequest) {
 
     await prisma.analyzedPost.update({ where: { id: analyzedPostId }, data: { status: 'generating' } });
 
+    const parsedSlides = JSON.parse(analyzed.slides);
     const postData = {
       shortcode: analyzed.shortcode,
       caption: analyzed.caption || '',
-      slides: JSON.parse(analyzed.slides),
+      slides: parsedSlides,
       isCarousel: true,
       authorUsername: undefined,
+      slideCount: slideCount || parsedSlides.length || 5,
     };
 
     // Generate content with Claude
-    const generated = await analyzeAndGenerate(postData, { niche, tone, brandName, additionalInstructions });
+    const generated = await analyzeAndGenerate(postData, { niche, tone, brandName, additionalInstructions, slideCount: slideCount || postData.slideCount });
 
     // Get active avatar if requested
     let avatarPath: string | null = null;
