@@ -52,7 +52,7 @@ export default function Navigation() {
       {/* Footer */}
       <div className="p-4 border-t border-gray-800">
         <div className="text-xs text-gray-600 text-center">
-          На базе Claude AI + DALL-E 3
+          На базе Claude AI + DALL-E 3 + Flux
         </div>
       </div>
     </aside>

@@ -36,7 +36,7 @@ export default function ScheduledPage() {
     try {
       const res = await fetch('/api/schedule', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({}) });
       const data = await res.json();
-      setMsg(`Processed ${data.processed} scheduled posts`);
+      setMsg(`Обработано ${data.processed} запланированных постов`);
       setTimeout(() => setMsg(''), 3000);
       // Reload
       const r2 = await fetch('/api/carousels');
@@ -54,11 +54,11 @@ export default function ScheduledPage() {
     <div className="space-y-6">
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-2xl font-bold text-white">Scheduled Posts</h1>
-          <p className="text-gray-400 text-sm mt-1">Manage your scheduled Instagram carousels</p>
+          <h1 className="text-2xl font-bold text-white">Запланированные посты</h1>
+          <p className="text-gray-400 text-sm mt-1">Управление запланированными Instagram-каруселями</p>
         </div>
         <button className="btn-secondary" onClick={processDue} disabled={processing}>
-          {processing ? '⏳ Processing...' : '🔄 Process Due Posts'}
+          {processing ? '⏳ Обработка...' : '🔄 Опубликовать готовые'}
         </button>
       </div>
 
@@ -67,12 +67,12 @@ export default function ScheduledPage() {
       {/* Scheduled */}
       <div className="card">
         <h2 className="text-base font-semibold text-white mb-4">
-          Scheduled ({scheduled.length})
+          Запланировано ({scheduled.length})
         </h2>
         {loading ? (
-          <p className="text-gray-500 text-sm text-center py-6">Loading...</p>
+          <p className="text-gray-500 text-sm text-center py-6">Загрузка...</p>
         ) : scheduled.length === 0 ? (
-          <p className="text-gray-500 text-sm text-center py-6">No scheduled posts</p>
+          <p className="text-gray-500 text-sm text-center py-6">Нет запланированных постов</p>
         ) : (
           <div className="space-y-3">
             {scheduled.map((c) => (
@@ -85,10 +85,10 @@ export default function ScheduledPage() {
       {/* Posted */}
       <div className="card">
         <h2 className="text-base font-semibold text-white mb-4">
-          Posted History ({posted.length})
+          История публикаций ({posted.length})
         </h2>
         {posted.length === 0 ? (
-          <p className="text-gray-500 text-sm text-center py-6">No posted carousels yet</p>
+          <p className="text-gray-500 text-sm text-center py-6">Пока нет опубликованных каруселей</p>
         ) : (
           <div className="space-y-3">
             {posted.map((c) => (
@@ -100,11 +100,11 @@ export default function ScheduledPage() {
 
       {/* Info */}
       <div className="card bg-gray-900/50">
-        <h3 className="text-sm font-semibold text-gray-400 mb-2">Scheduling Info</h3>
+        <h3 className="text-sm font-semibold text-gray-400 mb-2">Информация о расписании</h3>
         <ul className="space-y-1 text-sm text-gray-500">
-          <li>• Scheduled posts are processed when you click "Process Due Posts" above</li>
-          <li>• For automatic processing, set up a cron job calling: <code className="text-purple-400">POST /api/schedule</code></li>
-          <li>• Example Vercel cron: add <code className="text-purple-400">vercel.json</code> with cron config</li>
+          <li>• Запланированные посты обрабатываются при нажатии «Опубликовать готовые»</li>
+          <li>• Для автоматической обработки настройте cron-задачу: <code className="text-purple-400">POST /api/schedule</code></li>
+          <li>• Пример для Vercel cron: добавьте <code className="text-purple-400">vercel.json</code> с конфигурацией cron</li>
         </ul>
       </div>
     </div>
@@ -130,12 +130,12 @@ function CarouselItem({ carousel }: { carousel: Carousel }) {
         <p className="text-sm text-gray-300 truncate">{carousel.caption.slice(0, 80)}</p>
         <p className={`text-xs mt-1 ${isOverdue ? 'text-orange-400' : 'text-gray-500'}`}>
           {carousel.status === 'scheduled'
-            ? `${isOverdue ? '⚠️ Overdue: ' : '🕐 '}${new Date(carousel.scheduledAt!).toLocaleString()}`
-            : `✅ Posted: ${new Date(carousel.postedAt!).toLocaleString()}`}
+            ? `${isOverdue ? '⚠️ Просрочено: ' : '🕐 '}${new Date(carousel.scheduledAt!).toLocaleString()}`
+            : `✅ Опубликовано: ${new Date(carousel.postedAt!).toLocaleString()}`}
         </p>
       </div>
       <span className={`badge badge-${carousel.status}`}>
-        {carousel.status === 'scheduled' ? 'Scheduled' : 'Posted'}
+        {carousel.status === 'scheduled' ? 'Запланировано' : 'Опубликовано'}
       </span>
     </Link>
   );

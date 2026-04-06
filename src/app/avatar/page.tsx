@@ -16,7 +16,7 @@ export default function AvatarPage() {
   const [avatars, setAvatars] = useState<Avatar[]>([]);
   const [loading, setLoading] = useState(true);
   const [uploading, setUploading] = useState(false);
-  const [name, setName] = useState('My Avatar');
+  const [name, setName] = useState('Мой аватар');
   const [error, setError] = useState('');
   const [msg, setMsg] = useState('');
 
@@ -41,10 +41,10 @@ export default function AvatarPage() {
       const data = await res.json();
       if (!res.ok) throw new Error(data.error);
       setAvatars((prev) => [data, ...prev]);
-      setMsg('Avatar uploaded!');
+      setMsg('Аватар загружен!');
       setTimeout(() => setMsg(''), 3000);
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Upload failed');
+      setError(err instanceof Error ? err.message : 'Ошибка загрузки');
     } finally {
       setUploading(false);
     }
@@ -65,13 +65,13 @@ export default function AvatarPage() {
     });
     if (res.ok) {
       setAvatars((prev) => prev.map((a) => ({ ...a, isActive: a.id === id })));
-      setMsg('Active avatar updated!');
+      setMsg('Активный аватар обновлён!');
       setTimeout(() => setMsg(''), 2000);
     }
   }
 
   async function deleteAvatar(id: string) {
-    if (!confirm('Delete this avatar?')) return;
+    if (!confirm('Удалить этот аватар?')) return;
     const res = await fetch('/api/avatar', {
       method: 'DELETE',
       headers: { 'Content-Type': 'application/json' },
@@ -83,9 +83,9 @@ export default function AvatarPage() {
   return (
     <div className="space-y-6 max-w-2xl">
       <div>
-        <h1 className="text-2xl font-bold text-white">Avatar Management</h1>
+        <h1 className="text-2xl font-bold text-white">Управление аватаром</h1>
         <p className="text-gray-400 text-sm mt-1">
-          Your avatar will be automatically added to all generated carousel images
+          Аватар будет автоматически добавлен на все сгенерированные изображения карусели
         </p>
       </div>
 
@@ -94,13 +94,13 @@ export default function AvatarPage() {
 
       {/* Upload */}
       <div className="card">
-        <h2 className="text-base font-semibold text-white mb-4">Upload New Avatar</h2>
+        <h2 className="text-base font-semibold text-white mb-4">Загрузить новый аватар</h2>
 
         <div className="mb-3">
-          <label className="label">Avatar Name</label>
+          <label className="label">Название аватара</label>
           <input
             className="input"
-            placeholder="e.g. Profile Photo"
+            placeholder="например, Фото профиля"
             value={name}
             onChange={(e) => setName(e.target.value)}
           />
@@ -117,14 +117,14 @@ export default function AvatarPage() {
           <input {...getInputProps()} />
           <div className="text-4xl mb-3">{uploading ? '⏳' : '📤'}</div>
           {uploading ? (
-            <p className="text-gray-400">Uploading and processing...</p>
+            <p className="text-gray-400">Загрузка и обработка...</p>
           ) : isDragActive ? (
-            <p className="text-purple-400">Drop your photo here</p>
+            <p className="text-purple-400">Отпустите фото здесь</p>
           ) : (
             <>
-              <p className="text-gray-300 font-medium">Drag & drop your photo</p>
-              <p className="text-gray-500 text-sm mt-1">or click to select — JPG, PNG, WebP</p>
-              <p className="text-gray-600 text-xs mt-2">Will be cropped to square and resized to 400×400px</p>
+              <p className="text-gray-300 font-medium">Перетащите фото сюда</p>
+              <p className="text-gray-500 text-sm mt-1">или нажмите для выбора — JPG, PNG, WebP</p>
+              <p className="text-gray-600 text-xs mt-2">Будет обрезано до квадрата и изменён размер до 400×400px</p>
             </>
           )}
         </div>
@@ -133,9 +133,9 @@ export default function AvatarPage() {
       {/* Avatars List */}
       {!loading && (
         <div className="card">
-          <h2 className="text-base font-semibold text-white mb-4">Your Avatars</h2>
+          <h2 className="text-base font-semibold text-white mb-4">Ваши аватары</h2>
           {avatars.length === 0 ? (
-            <p className="text-gray-500 text-sm text-center py-6">No avatars uploaded yet</p>
+            <p className="text-gray-500 text-sm text-center py-6">Аватары ещё не загружены</p>
           ) : (
             <div className="grid grid-cols-3 gap-4">
               {avatars.map((avatar) => (
@@ -156,7 +156,7 @@ export default function AvatarPage() {
 
                   {avatar.isActive && (
                     <div className="absolute top-2 left-2 bg-purple-600 rounded-full px-2 py-0.5 text-xs text-white font-medium">
-                      Active
+                      Активный
                     </div>
                   )}
 
@@ -168,14 +168,14 @@ export default function AvatarPage() {
                           onClick={() => setActive(avatar.id)}
                           className="flex-1 text-xs bg-purple-700/30 text-purple-400 border border-purple-700/50 rounded-lg py-1 hover:bg-purple-700/50 transition-colors"
                         >
-                          Set Active
+                          Сделать активным
                         </button>
                       )}
                       <button
                         onClick={() => deleteAvatar(avatar.id)}
                         className="flex-1 text-xs bg-red-900/20 text-red-400 border border-red-700/30 rounded-lg py-1 hover:bg-red-900/40 transition-colors"
                       >
-                        Delete
+                        Удалить
                       </button>
                     </div>
                   </div>
@@ -188,12 +188,12 @@ export default function AvatarPage() {
 
       {/* Info */}
       <div className="card bg-gray-900/50">
-        <h3 className="text-sm font-semibold text-gray-400 mb-2">How it works</h3>
+        <h3 className="text-sm font-semibold text-gray-400 mb-2">Как это работает</h3>
         <ul className="space-y-1 text-sm text-gray-500">
-          <li>• The active avatar is automatically composited onto generated carousel images</li>
-          <li>• It appears in the bottom-left corner with a white border ring</li>
-          <li>• You can have multiple avatars and switch between them</li>
-          <li>• Best results with a clear headshot or logo</li>
+          <li>• Активный аватар автоматически накладывается на сгенерированные изображения карусели</li>
+          <li>• Он отображается в левом нижнем углу с белой рамкой</li>
+          <li>• Можно иметь несколько аватаров и переключаться между ними</li>
+          <li>• Лучший результат с чётким портретом или логотипом</li>
         </ul>
       </div>
     </div>

@@ -32,7 +32,7 @@ export default function SettingsPage() {
 
   async function connectAccount() {
     if (!form.accessToken || !form.accountId) {
-      setError('Access token and account ID are required');
+      setError('Токен доступа и ID аккаунта обязательны');
       return;
     }
     setSaving(true);
@@ -47,17 +47,17 @@ export default function SettingsPage() {
       if (!res.ok) throw new Error(data.error);
       setAccounts((prev) => [data, ...prev.map((a) => ({ ...a, isActive: false }))]);
       setForm({ accessToken: '', accountId: '', username: '' });
-      setMsg('Instagram account connected successfully!');
+      setMsg('Instagram-аккаунт успешно подключён!');
       setTimeout(() => setMsg(''), 4000);
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Failed to connect');
+      setError(err instanceof Error ? err.message : 'Не удалось подключиться');
     } finally {
       setSaving(false);
     }
   }
 
   async function removeAccount(id: string) {
-    if (!confirm('Remove this Instagram account?')) return;
+    if (!confirm('Удалить этот Instagram-аккаунт?')) return;
     await fetch('/api/instagram-auth', {
       method: 'DELETE',
       headers: { 'Content-Type': 'application/json' },
@@ -69,8 +69,8 @@ export default function SettingsPage() {
   return (
     <div className="space-y-6 max-w-2xl">
       <div>
-        <h1 className="text-2xl font-bold text-white">Settings</h1>
-        <p className="text-gray-400 text-sm mt-1">Configure your Instagram account and API keys</p>
+        <h1 className="text-2xl font-bold text-white">Настройки</h1>
+        <p className="text-gray-400 text-sm mt-1">Настройте аккаунт Instagram и API-ключи</p>
       </div>
 
       {msg && <div className="bg-green-900/30 border border-green-700/50 rounded-lg p-3 text-green-400 text-sm">{msg}</div>}
@@ -78,11 +78,11 @@ export default function SettingsPage() {
 
       {/* Connected Accounts */}
       <div className="card">
-        <h2 className="text-base font-semibold text-white mb-4">Connected Instagram Accounts</h2>
+        <h2 className="text-base font-semibold text-white mb-4">Подключённые Instagram-аккаунты</h2>
         {loading ? (
-          <p className="text-gray-500 text-sm">Loading...</p>
+          <p className="text-gray-500 text-sm">Загрузка...</p>
         ) : accounts.length === 0 ? (
-          <p className="text-gray-500 text-sm text-center py-4">No accounts connected</p>
+          <p className="text-gray-500 text-sm text-center py-4">Нет подключённых аккаунтов</p>
         ) : (
           <div className="space-y-2">
             {accounts.map((account) => (
@@ -90,12 +90,12 @@ export default function SettingsPage() {
                 <div>
                   <div className="flex items-center gap-2">
                     <span className="text-white font-medium text-sm">@{account.username}</span>
-                    {account.isActive && <span className="badge badge-approved">Active</span>}
+                    {account.isActive && <span className="badge badge-approved">Активный</span>}
                   </div>
                   <p className="text-xs text-gray-500 mt-0.5">ID: {account.accountId}</p>
                 </div>
                 <button onClick={() => removeAccount(account.id)} className="btn-danger text-xs px-3 py-1.5">
-                  Remove
+                  Удалить
                 </button>
               </div>
             ))}
