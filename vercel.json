@@ -1,0 +1,16 @@
+{
+  "crons": [
+    {
+      "path": "/api/schedule",
+      "schedule": "*/5 * * * *"
+    }
+  ],
+  "functions": {
+    "src/app/api/generate/route.ts": {
+      "maxDuration": 120
+    },
+    "src/app/api/post/route.ts": {
+      "maxDuration": 60
+    }
+  }
+}

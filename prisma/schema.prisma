@@ -1,0 +1,56 @@
+// Use this schema for LOCAL DEVELOPMENT with SQLite
+// Copy this file to schema.prisma for local dev:
+//   cp prisma/schema.sqlite.prisma prisma/schema.prisma
+// And set DATABASE_URL="file:./dev.db" in .env
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "sqlite"
+  url      = env("DATABASE_URL")
+}
+
+model Avatar {
+  id        String   @id @default(uuid())
+  name      String
+  imagePath String
+  isActive  Boolean  @default(false)
+  createdAt DateTime @default(now())
+}
+
+model InstagramAccount {
+  id          String   @id @default(uuid())
+  username    String
+  accessToken String
+  accountId   String
+  isActive    Boolean  @default(false)
+  createdAt   DateTime @default(now())
+}
+
+model AnalyzedPost {
+  id           String     @id @default(uuid())
+  instagramUrl String
+  shortcode    String
+  caption      String?
+  slides       String
+  status       String     @default("analyzed")
+  createdAt    DateTime   @default(now())
+  carousels    Carousel[]
+}
+
+model Carousel {
+  id              String       @id @default(uuid())
+  analyzedPostId  String?
+  analyzedPost    AnalyzedPost? @relation(fields: [analyzedPostId], references: [id])
+  title           String?
+  caption         String
+  slides          String
+  status          String       @default("draft")
+  scheduledAt     DateTime?
+  postedAt        DateTime?
+  instagramPostId String?
+  createdAt       DateTime     @default(now())
+  updatedAt       DateTime     @updatedAt
+}
