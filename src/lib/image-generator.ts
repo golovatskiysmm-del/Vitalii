@@ -2,31 +2,81 @@ import axios from 'axios';
 import sharp from 'sharp';
 import { saveImage } from './storage';
 
+export type ImageProvider = 'dalle' | 'flux-schnell' | 'flux-dev';
+
 // Lazy init
 function getOpenAI() {
   const OpenAI = require('openai');
   return new OpenAI.default({ apiKey: process.env.OPENAI_API_KEY || 'dummy' });
 }
 
+function getReplicate() {
+  const Replicate = require('replicate');
+  return new Replicate.default({ auth: process.env.REPLICATE_API_TOKEN || '' });
+}
+
 export async function generateSlideImage(prompt: string, style?: string): Promise<string> {
-  const openai = getOpenAI();
+  return generateSlideImageWithProvider(prompt, 'dalle', style);
+}
+
+export async function generateSlideImageWithProvider(
+  prompt: string,
+  provider: ImageProvider | 'none' = 'dalle',
+  style?: string
+): Promise<string> {
   const enhancedPrompt = `${prompt}. Style: ${style || 'modern, clean, professional, Instagram-ready, high quality, vibrant colors'}. No text, no words, no letters in the image.`;
 
-  const response = await openai.images.generate({
-    model: 'dall-e-3',
-    prompt: enhancedPrompt,
-    n: 1,
-    size: '1024x1024',
-    quality: 'standard',
-    response_format: 'url',
-  });
+  if (provider === 'dalle') {
+    const openai = getOpenAI();
+    const response = await openai.images.generate({
+      model: 'dall-e-3',
+      prompt: enhancedPrompt,
+      n: 1,
+      size: '1024x1024',
+      quality: 'standard',
+      response_format: 'url',
+    });
 
-  const imageUrl = response.data?.[0]?.url;
-  if (!imageUrl) throw new Error('No image URL returned from DALL-E');
+    const imageUrl = response.data?.[0]?.url;
+    if (!imageUrl) throw new Error('No image URL returned from DALL-E');
 
-  const imgRes = await axios.get(imageUrl, { responseType: 'arraybuffer' });
-  const buffer = await sharp(Buffer.from(imgRes.data)).jpeg({ quality: 90 }).toBuffer();
-  return saveImage(buffer, 'jpg');
+    const imgRes = await axios.get(imageUrl, { responseType: 'arraybuffer' });
+    const buffer = await sharp(Buffer.from(imgRes.data)).jpeg({ quality: 90 }).toBuffer();
+    return saveImage(buffer, 'jpg');
+  }
+
+  if (provider === 'flux-schnell' || provider === 'flux-dev') {
+    const replicate = getReplicate();
+    const model = provider === 'flux-schnell'
+      ? 'black-forest-labs/flux-schnell'
+      : 'black-forest-labs/flux-dev';
+
+    const output = await replicate.run(model, {
+      input: {
+        prompt: enhancedPrompt,
+        aspect_ratio: '1:1',
+        output_format: 'jpg',
+        output_quality: 90,
+        num_outputs: 1,
+      },
+    });
+
+    // output is typically an array of URLs or a ReadableStream
+    let imageUrl: string | undefined;
+    if (Array.isArray(output) && output.length > 0) {
+      imageUrl = typeof output[0] === 'string' ? output[0] : String(output[0]);
+    } else if (typeof output === 'string') {
+      imageUrl = output;
+    }
+
+    if (!imageUrl) throw new Error('No image URL returned from Replicate');
+
+    const imgRes = await axios.get(imageUrl, { responseType: 'arraybuffer' });
+    const buffer = await sharp(Buffer.from(imgRes.data)).jpeg({ quality: 90 }).toBuffer();
+    return saveImage(buffer, 'jpg');
+  }
+
+  throw new Error(`Unknown image provider: ${provider}`);
 }
 
 export async function compositeAvatarOnImage(

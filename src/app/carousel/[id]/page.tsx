@@ -144,9 +144,9 @@ export default function CarouselPage() {
         </div>
         <div className="flex items-center gap-2">
           <span className={`badge badge-${carousel.status === 'posting' ? 'generating' : carousel.status}`}>
-            {carousel.status.charAt(0).toUpperCase() + carousel.status.slice(1)}
+            {{'draft':'Черновик','approved':'Одобрено','scheduled':'Запланировано','posted':'Опубликовано','failed':'Ошибка','generating':'Генерация...','posting':'Публикация...'}[carousel.status] || carousel.status}
           </span>
-          <button onClick={deleteCarousel} className="btn-danger text-xs px-3 py-1.5">Delete</button>
+          <button onClick={deleteCarousel} className="btn-danger text-xs px-3 py-1.5">Удалить</button>
         </div>
       </div>
 
@@ -155,7 +155,7 @@ export default function CarouselPage() {
       {error && <div className="bg-red-900/30 border border-red-700/50 rounded-lg p-3 text-red-400 text-sm">⚠️ {error}</div>}
       {isPosted && (
         <div className="bg-purple-900/30 border border-purple-700/50 rounded-lg p-3 text-purple-400 text-sm">
-          ✅ Posted to Instagram! Media ID: {carousel.instagramPostId}
+          ✅ Опубликовано в Instagram! Media ID: {carousel.instagramPostId}
         </div>
       )}
 
@@ -174,7 +174,7 @@ export default function CarouselPage() {
             ) : (
               <div className="absolute inset-0 flex flex-col items-center justify-center p-6 text-center">
                 <div className="text-5xl mb-4">🖼️</div>
-                <p className="text-gray-400 text-xs">Image generation was not enabled</p>
+                <p className="text-gray-400 text-xs">Генерация изображений не была включена</p>
               </div>
             )}
 
@@ -214,11 +214,11 @@ export default function CarouselPage() {
         <div className="col-span-2 space-y-4">
           {/* Current slide text */}
           <div className="card">
-            <h3 className="text-sm font-semibold text-gray-400 mb-2">Slide {activeSlide + 1} Text</h3>
+            <h3 className="text-sm font-semibold text-gray-400 mb-2">Слайд {activeSlide + 1} — текст</h3>
             <p className="text-white font-semibold text-sm mb-1">{carousel.slides[activeSlide]?.heading}</p>
             <p className="text-gray-300 text-sm">{carousel.slides[activeSlide]?.bodyText}</p>
             <details className="mt-2">
-              <summary className="text-xs text-gray-600 cursor-pointer hover:text-gray-500">Image prompt</summary>
+              <summary className="text-xs text-gray-600 cursor-pointer hover:text-gray-500">Промпт для изображения</summary>
               <p className="text-xs text-gray-600 mt-1">{carousel.slides[activeSlide]?.imagePrompt}</p>
             </details>
           </div>
@@ -226,12 +226,12 @@ export default function CarouselPage() {
           {/* Caption */}
           <div className="card">
             <div className="flex items-center justify-between mb-2">
-              <h3 className="text-sm font-semibold text-gray-400">Caption</h3>
+              <h3 className="text-sm font-semibold text-gray-400">Подпись</h3>
               <button
                 onClick={() => editingCaption ? saveCaption() : setEditingCaption(true)}
                 className="text-xs text-purple-400 hover:text-purple-300"
               >
-                {editingCaption ? 'Save' : 'Edit'}
+                {editingCaption ? 'Сохранить' : 'Редактировать'}
               </button>
             </div>
             {editingCaption ? (
@@ -251,11 +251,11 @@ export default function CarouselPage() {
           {/* Actions */}
           {!isPosted && (
             <div className="card space-y-3">
-              <h3 className="text-sm font-semibold text-gray-400">Actions</h3>
+              <h3 className="text-sm font-semibold text-gray-400">Действия</h3>
 
               {carousel.status === 'draft' && (
                 <button className="btn-primary w-full justify-center" onClick={approve}>
-                  ✅ Approve Carousel
+                  ✅ Одобрить карусель
                 </button>
               )}
 
@@ -266,11 +266,11 @@ export default function CarouselPage() {
                     onClick={postNow}
                     disabled={posting}
                   >
-                    {posting ? '⏳ Posting...' : '🚀 Post Now'}
+                    {posting ? '⏳ Публикация...' : '🚀 Опубликовать сейчас'}
                   </button>
 
                   <div className="border-t border-gray-800 pt-3">
-                    <label className="label">Schedule for later</label>
+                    <label className="label">Запланировать на позже</label>
                     <input
                       type="datetime-local"
                       className="input text-sm mb-2"
@@ -283,7 +283,7 @@ export default function CarouselPage() {
                       onClick={schedulePost}
                       disabled={posting || !scheduledAt}
                     >
-                      🕐 Schedule
+                      🕐 Запланировать
                     </button>
                   </div>
                 </>
@@ -295,7 +295,7 @@ export default function CarouselPage() {
                     Scheduled: {new Date(carousel.scheduledAt!).toLocaleString()}
                   </p>
                   <button className="btn-primary w-full justify-center" onClick={postNow} disabled={posting}>
-                    🚀 Post Now Instead
+                    🚀 Опубликовать сейчас
                   </button>
                 </>
               )}

@@ -2,13 +2,13 @@ export const dynamic = 'force-dynamic';
 import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/lib/db';
 import { analyzeAndGenerate } from '@/lib/content-generator';
-import { generateSlideImage, compositeAvatarOnImage } from '@/lib/image-generator';
+import { generateSlideImageWithProvider, compositeAvatarOnImage, ImageProvider } from '@/lib/image-generator';
 
 export const maxDuration = 120;
 
 export async function POST(req: NextRequest) {
   try {
-    const { analyzedPostId, niche, tone, brandName, additionalInstructions, avatarId, generateImages } = await req.json();
+    const { analyzedPostId, niche, tone, brandName, additionalInstructions, avatarId, generateImages, imageProvider } = await req.json();
 
     if (!analyzedPostId) {
       return NextResponse.json({ error: 'analyzedPostId is required' }, { status: 400 });
@@ -45,9 +45,11 @@ export async function POST(req: NextRequest) {
       generated.slides.map(async (slide, i) => {
         let imagePath: string | undefined;
 
-        if (generateImages && process.env.OPENAI_API_KEY) {
+        const resolvedProvider: ImageProvider = imageProvider && imageProvider !== 'none' ? imageProvider : 'dalle';
+        const shouldGenerateImages = generateImages && imageProvider !== 'none';
+        if (shouldGenerateImages && (process.env.OPENAI_API_KEY || process.env.REPLICATE_API_TOKEN)) {
           try {
-            imagePath = await generateSlideImage(slide.imagePrompt);
+            imagePath = await generateSlideImageWithProvider(slide.imagePrompt, resolvedProvider);
 
             // Composite avatar on image if available
             if (avatarPath) {
