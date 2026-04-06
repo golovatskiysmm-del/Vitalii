@@ -105,20 +105,20 @@ export default function SettingsPage() {
 
       {/* Connect New Account */}
       <div className="card">
-        <h2 className="text-base font-semibold text-white mb-4">Connect Instagram Account</h2>
+        <h2 className="text-base font-semibold text-white mb-4">Подключить Instagram-аккаунт</h2>
 
         <div className="space-y-4">
           <div>
-            <label className="label">Instagram Business Account ID</label>
+            <label className="label">ID бизнес-аккаунта Instagram</label>
             <input
               className="input"
-              placeholder="e.g. 17841400123456789"
+              placeholder="например, 17841400123456789"
               value={form.accountId}
               onChange={(e) => setForm({ ...form, accountId: e.target.value })}
             />
           </div>
           <div>
-            <label className="label">Long-lived Access Token</label>
+            <label className="label">Долгосрочный токен доступа</label>
             <input
               className="input"
               type="password"
@@ -128,48 +128,48 @@ export default function SettingsPage() {
             />
           </div>
           <div>
-            <label className="label">Username (optional, will be verified)</label>
+            <label className="label">Имя пользователя (необязательно, будет проверено)</label>
             <input
               className="input"
-              placeholder="@yourusername"
+              placeholder="@yourname"
               value={form.username}
               onChange={(e) => setForm({ ...form, username: e.target.value })}
             />
           </div>
 
           <button className="btn-primary" onClick={connectAccount} disabled={saving}>
-            {saving ? '⏳ Connecting...' : '🔗 Connect Account'}
+            {saving ? '⏳ Подключение...' : '🔗 Подключить аккаунт'}
           </button>
         </div>
       </div>
 
       {/* How to get token */}
       <div className="card bg-gray-900/50">
-        <h3 className="text-sm font-semibold text-gray-400 mb-3">How to get your Instagram API credentials</h3>
+        <h3 className="text-sm font-semibold text-gray-400 mb-3">Как получить учётные данные Instagram API</h3>
         <ol className="space-y-2 text-sm text-gray-500 list-decimal list-inside">
-          <li>Go to <span className="text-purple-400">developers.facebook.com</span> and create an app</li>
-          <li>Add "Instagram Graph API" product to your app</li>
-          <li>Connect your Instagram Business/Creator account via Facebook Page</li>
-          <li>Generate a long-lived access token (60 days)</li>
-          <li>Find your Instagram Business Account ID in the Graph API Explorer</li>
-          <li>Required permissions: <code className="text-purple-400">instagram_basic, instagram_content_publish</code></li>
+          <li>Перейдите на <span className="text-purple-400">developers.facebook.com</span> и создайте приложение</li>
+          <li>Добавьте продукт «Instagram Graph API» в приложение</li>
+          <li>Подключите Instagram Business/Creator аккаунт через страницу Facebook</li>
+          <li>Сгенерируйте долгосрочный токен доступа (60 дней)</li>
+          <li>Найдите ID бизнес-аккаунта Instagram в Graph API Explorer</li>
+          <li>Необходимые разрешения: <code className="text-purple-400">instagram_basic, instagram_content_publish</code></li>
         </ol>
       </div>
 
       {/* API Keys reminder */}
       <div className="card bg-gray-900/50">
-        <h3 className="text-sm font-semibold text-gray-400 mb-2">Environment Variables</h3>
-        <p className="text-sm text-gray-500 mb-2">Make sure these are set in your <code className="text-purple-400">.env</code> file:</p>
+        <h3 className="text-sm font-semibold text-gray-400 mb-2">Переменные среды</h3>
+        <p className="text-sm text-gray-500 mb-2">Убедитесь, что они указаны в файле <code className="text-purple-400">.env</code>:</p>
         <div className="space-y-1 font-mono text-xs">
           <div className="flex justify-between text-gray-500">
             <span>ANTHROPIC_API_KEY</span>
             <span className={process.env.ANTHROPIC_API_KEY ? 'text-green-400' : 'text-red-400'}>
-              Required for content generation
+              Необходим для генерации контента
             </span>
           </div>
           <div className="flex justify-between text-gray-500">
             <span>OPENAI_API_KEY</span>
-            <span className="text-yellow-500">Required for image generation</span>
+            <span className="text-yellow-500">Необходим для генерации изображений</span>
           </div>
         </div>
       </div>

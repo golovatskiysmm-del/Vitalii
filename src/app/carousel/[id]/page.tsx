@@ -135,11 +135,11 @@ export default function CarouselPage() {
       <div className="flex items-start justify-between">
         <div>
           <div className="flex items-center gap-3 mb-1">
-            <button onClick={() => router.push('/')} className="text-gray-500 hover:text-gray-300 text-sm">← Back</button>
+            <button onClick={() => router.push('/')} className="text-gray-500 hover:text-gray-300 text-sm">← Назад</button>
           </div>
-          <h1 className="text-xl font-bold text-white">Carousel Preview</h1>
+          <h1 className="text-xl font-bold text-white">Просмотр карусели</h1>
           {carousel.analyzedPost?.authorUsername && (
-            <p className="text-sm text-gray-500">Based on @{carousel.analyzedPost.authorUsername}</p>
+            <p className="text-sm text-gray-500">На основе @{carousel.analyzedPost.authorUsername}</p>
           )}
         </div>
         <div className="flex items-center gap-2">
