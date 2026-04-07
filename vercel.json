@@ -1,0 +1,6 @@
+{
+  "functions": {
+    "src/app/api/generate-audio/route.ts": { "maxDuration": 60 },
+    "src/app/api/generate-text/route.ts": { "maxDuration": 30 }
+  }
+}
