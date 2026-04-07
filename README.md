@@ -1,130 +1,139 @@
-# Instagram Carousel Studio
+# Instagram Carousel Tool
 
-AI-powered tool to analyze Instagram carousels and generate unique content for auto-posting.
+Веб-приложение для создания уникальных Instagram-каруселей на основе анализа постов конкурентов.
 
-## Features
+## Что делает приложение
 
-- **Analyze** any public Instagram carousel post (images, videos, captions)
-- **Generate** unique carousel with AI text (Claude) + AI images (DALL-E 3)
-- **Avatar** — automatically overlay your photo on all generated images
-- **Approve & Post** — review, edit, then post immediately or schedule
-- **Auto-scheduling** — schedule posts for specific times
+1. **Анализ конкурента** — вставляешь ссылку на публичный Instagram-пост, приложение показывает карусель через embed и читает подпись
+2. **Контекст / ДНК клиента** — загружаешь файл (PDF/DOCX/TXT), или подключаешь Notion / Google Docs / любой URL
+3. **Генерация** — Claude AI пишет уникальный текст для каждого слайда, DALL-E 3 / Flux / Ideogram генерирует изображения
+4. **Результат** — готовая карусель с текстом, хэштегами и изображениями
 
-## Tech Stack
+## Стек
 
-- **Next.js 14** (App Router)
-- **Claude claude-sonnet-4-6** — content analysis & generation
-- **DALL-E 3** — unique image generation
-- **Instagram Graph API** — publishing
-- **Prisma** + **Vercel Postgres** (or SQLite for local)
-- **Vercel Blob** — image storage
+- **Frontend/Backend**: Next.js 14 App Router + TypeScript
+- **UI**: Tailwind CSS, тёмная тема
+- **AI текст**: Claude claude-sonnet-4-6 (Anthropic)
+- **AI изображения**: DALL-E 3 (OpenAI), Flux Schnell/Dev/Pro (Replicate), Ideogram v2, Stable Diffusion XL
+- **БД**: Prisma ORM + Neon Serverless PostgreSQL
+- **Хранилище**: Vercel Blob (prod) / локальная файловая система (dev)
+- **Деплой**: Vercel (auto-deploy при каждом пуше в ветку)
 
----
+## Структура проекта
 
-## Local Development
+```
+src/
+├── app/
+│   ├── analyze/page.tsx           # Главная страница — пошаговый мастер создания карусели
+│   ├── carousel/[id]/page.tsx     # Просмотр готовой карусели
+│   ├── avatar/page.tsx            # Управление аватаром (накладывается на слайды)
+│   ├── scheduled/page.tsx         # Отложенные публикации
+│   ├── settings/page.tsx          # Настройки Instagram аккаунта
+│   └── api/
+│       ├── analyze/route.ts       # Парсинг Instagram поста (oEmbed)
+│       ├── generate/route.ts      # Генерация карусели (Claude + изображения)
+│       ├── fetch-context/route.ts # Загрузка контекста с URL (Notion, Google Docs)
+│       ├── upload-context/route.ts# Загрузка файла (PDF/DOCX/TXT)
+│       ├── carousels/route.ts     # CRUD каруселей
+│       ├── post/route.ts          # Публикация в Instagram
+│       ├── schedule/route.ts      # Cron для отложенных публикаций
+│       ├── avatar/route.ts        # Управление аватаром
+│       └── debug-key/route.ts     # Диагностика API ключей
+├── lib/
+│   ├── instagram-scraper.ts       # Парсинг Instagram (oEmbed + embed iframe)
+│   ├── content-generator.ts       # Генерация текста через Claude API
+│   ├── image-generator.ts         # Генерация изображений (6 провайдеров)
+│   ├── instagram-poster.ts        # Публикация через Instagram Graph API
+│   ├── storage.ts                 # Сохранение файлов (Vercel Blob / локально)
+│   └── db.ts                      # Prisma клиент
+└── components/
+    └── Navigation.tsx             # Боковое меню
+```
 
-### 1. Install dependencies
+## Быстрый старт
+
+### 1. Клонировать репозиторий
 
 ```bash
+git clone https://github.com/golovatskiysmm-del/Vitalii.git
+cd Vitalii
+git checkout claude/instagram-carousel-tool-0ZgdT
 npm install
 ```
 
-### 2. Set up SQLite for local dev
+### 2. Переменные окружения
 
-```bash
-cp prisma/schema.sqlite.prisma prisma/schema.prisma
-```
+Создать файл `.env.local`:
 
-### 3. Configure environment
-
-```bash
-cp .env.example .env
-```
-
-Edit `.env`:
 ```env
-DATABASE_URL="file:./dev.db"
-ANTHROPIC_API_KEY="sk-ant-your-key"
-OPENAI_API_KEY="sk-your-key"
-NEXT_PUBLIC_APP_URL="http://localhost:3000"
+# Обязательно
+ANTHROPIC_API_KEY=sk-ant-api03-...        # console.anthropic.com
+
+# Для генерации изображений (хотя бы одно)
+OPENAI_API_KEY=sk-...                     # platform.openai.com  (DALL-E 3)
+REPLICATE_API_TOKEN=r8_...                # replicate.com        (Flux, SDXL)
+IDEOGRAM_API_KEY=...                      # ideogram.ai          (Ideogram v2)
+
+# База данных — Neon Serverless PostgreSQL
+DATABASE_URL=postgresql://...             # neon.tech (pooled)
+DATABASE_URL_UNPOOLED=postgresql://...    # neon.tech (direct)
+
+# Хранилище изображений
+BLOB_READ_WRITE_TOKEN=vercel_blob_...     # Vercel Storage → Blob
+
+# Instagram автопостинг (опционально)
+INSTAGRAM_ACCESS_TOKEN=...               # Facebook Developers → Graph API
+INSTAGRAM_ACCOUNT_ID=...
 ```
 
-### 4. Initialize database
+### 3. База данных
 
 ```bash
-npm run db:push
+npx prisma generate
+npx prisma db push
 ```
 
-### 5. Run the app
+### 4. Запуск локально
 
 ```bash
 npm run dev
+# → http://localhost:3000
 ```
 
-Open [http://localhost:3000](http://localhost:3000)
+## Деплой на Vercel
 
----
+1. Форкнуть репозиторий на GitHub
+2. Vercel → New Project → Import → выбрать репозиторий
+3. Добавить все переменные окружения (см. выше)
+4. Подключить Neon Postgres: Vercel → Storage → Create Database → Neon
+5. Deploy
 
-## Deploy to Vercel
+Каждый пуш в ветку `claude/instagram-carousel-tool-0ZgdT` → автодеплой.
 
-### 1. Push to GitHub
+## Провайдеры генерации изображений
 
-```bash
-git add . && git commit -m "Initial commit" && git push
-```
+| Провайдер | Env переменная | Качество | Цена |
+|---|---|---|---|
+| DALL-E 3 | `OPENAI_API_KEY` | ★★★★☆ | ~$0.04/img |
+| Flux Schnell | `REPLICATE_API_TOKEN` | ★★★☆☆ | ~$0.003/img |
+| Flux Dev | `REPLICATE_API_TOKEN` | ★★★★☆ | ~$0.025/img |
+| Flux 1.1 Pro | `REPLICATE_API_TOKEN` | ★★★★★ | ~$0.04/img |
+| Ideogram v2 | `IDEOGRAM_API_KEY` | ★★★★★ | ~$0.08/img |
+| Stable Diffusion XL | `REPLICATE_API_TOKEN` | ★★★☆☆ | ~$0.002/img |
 
-### 2. Import to Vercel
+## Известные ограничения
 
-Go to [vercel.com](https://vercel.com) → New Project → Import from GitHub
+- **Instagram изображения**: Instagram блокирует серверный доступ к медиафайлам с облачных IP (Vercel/AWS). Карусель конкурента показывается через официальный iframe embed. Для получения реальных CDN URL слайдов нужна интеграция с Instagram Graph API (Facebook App + User Access Token).
+- **Notion**: страница должна быть публичной (Share → Publish to web)
+- **Google Docs**: документ открыт «для всех по ссылке»
+- **Cron на Vercel Hobby**: только ежедневный (0 9 * * *)
 
-### 3. Add Storage
+## Что можно доработать
 
-In your Vercel project:
-- **Storage** → Add **Postgres** (auto-sets `DATABASE_URL` and `DIRECT_URL`)
-- **Storage** → Add **Blob** (auto-sets `BLOB_READ_WRITE_TOKEN`)
-
-### 4. Set Environment Variables
-
-In Vercel dashboard → Settings → Environment Variables:
-
-| Variable | Value |
-|----------|-------|
-| `ANTHROPIC_API_KEY` | Your Claude API key |
-| `OPENAI_API_KEY` | Your OpenAI API key |
-| `NEXT_PUBLIC_APP_URL` | `https://your-app.vercel.app` |
-
-### 5. Run database migration
-
-After first deploy, run in Vercel dashboard → Functions → or via CLI:
-```bash
-npx vercel env pull .env.local
-npx prisma migrate deploy
-```
-
-### 6. Cron job (auto-scheduling)
-
-`vercel.json` already configures a cron job running every 5 minutes to process scheduled posts.
-
----
-
-## Instagram Graph API Setup
-
-1. Go to [developers.facebook.com](https://developers.facebook.com) → Create App → Business
-2. Add **Instagram Graph API** product
-3. Connect your **Instagram Business/Creator** account via a Facebook Page
-4. Required permissions: `instagram_basic`, `instagram_content_publish`, `pages_read_engagement`
-5. Generate a **long-lived access token** (valid 60 days)
-6. Find your **Instagram Business Account ID** via Graph API Explorer
-7. Enter credentials in the app's **Settings** page
-
----
-
-## Workflow
-
-```
-1. Paste Instagram URL → Analyze
-2. Set generation options (niche, tone, brand)
-3. AI generates unique slides + images
-4. Preview carousel, edit caption if needed
-5. Approve → Post Now or Schedule
-```
+- [ ] Instagram Graph API — получение реальных изображений карусели
+- [ ] Редактор слайдов с drag-and-drop и текстом поверх изображений
+- [ ] Поддержка нескольких Instagram аккаунтов
+- [ ] Календарь публикаций
+- [ ] Аналитика постов
+- [ ] Экспорт карусели в PDF / ZIP
+- [ ] Шаблоны стилей оформления
